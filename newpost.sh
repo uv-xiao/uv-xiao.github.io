@@ -12,6 +12,8 @@ title="$1"
 
 # get date
 date=$(date +"%Y-%m-%d")
+# time=$(date +"%H:%M:%S")
+time="00:00:00" # set as 00:00:00 to avoid "has a future date"
 
 # create the post
 post_path="_posts/$date-$title.md"
@@ -23,13 +25,13 @@ touch $post_path
 
 echo "---
 layout: post
-title: supported features
-date: 2024-11-18 00:32:13
-description: this is what features are supported in posts
+title: $title
+date: $date $time
+description:
 tags:
-categories: sample-posts
+categories:
 tabs: true
-thumbnail: assets/img/9.jpg
+thumbnail:
 mermaid:
   enabled: true
   zoomable: true
