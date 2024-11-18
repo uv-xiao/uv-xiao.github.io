@@ -1,5 +1,15 @@
-# al-folio
+# Personal Website
 
+## Instructions
+
+Run `bash ./install.sh` to install dependencies.
+
+Run `./localdeploy.sh` to deploy locally.
+
+Run `./newpost.sh <title>` to create a new post.
+
+<details>
+<summary>al-folio README</summary>
 <div align="center">
 
 [![Preview](readme_preview/al-folio-preview.png)](https://alshedivat.github.io/al-folio/)
@@ -479,3 +489,5 @@ Our most active contributors are welcome to join the maintainers team. If you ar
 The theme is available as open source under the terms of the [MIT License](https://github.com/alshedivat/al-folio/blob/main/LICENSE).
 
 Originally, **al-folio** was based on the [\*folio theme](https://github.com/bogoli/-folio) (published by [Lia Bogoev](https://liabogoev.com) and under the MIT license). Since then, it got a full re-write of the styles and many additional cool features.
+
+</details>

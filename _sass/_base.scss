@@ -248,6 +248,9 @@ ul.task-list input[type="checkbox"] {
   border-bottom: 1px solid var(--global-divider-color);
   background-color: var(--global-bg-color);
   opacity: 0.95;
+  a{
+    font-family: "Indie Flower";
+  }
 }
 
 .navbar .dropdown-menu {
@@ -870,6 +873,10 @@ html.transition *:after {
 
 // Extra Markdown style (post Customization)
 .post {
+  h1{
+    color: var(--global-theme-color);
+    font-family: "Indie Flower";
+  }
   .post-meta {
     color: var(--global-text-color-light);
     font-size: 0.875rem;

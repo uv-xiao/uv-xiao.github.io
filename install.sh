@@ -34,3 +34,4 @@ pipx install jupyter
 gem pristine --all
 
 chmod +x ./localdeploy.sh
+chmod +x ./newpost.sh
