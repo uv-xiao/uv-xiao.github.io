@@ -6,8 +6,8 @@ subtitle:
 
 profile:
   align: right
-  image: prof_pic.jpg
-  image_circular: false # crops the image to make it circular
+  image: self_at_fuzhou.jpg
+  image_circular: true # crops the image to make it circular
   more_info:
 
 news: false # includes a list of news items

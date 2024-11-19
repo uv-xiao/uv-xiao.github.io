@@ -1,19 +1,29 @@
-#! /bin/bash
+#! /bin/zsh
 
-if [! -d "$HOME/.rbenv/"]; then
+set -e
+
+CURDIR=$(pwd)
+
+if [ ! -d "$HOME/.rbenv/" ]; then
+  # if exit with error, rm -rf $HOME/.rbenv
+  trap 'rm -rf $HOME/.rbenv' ERR
   echo "Installing rbenv..."
   git clone https://github.com/rbenv/rbenv.git $HOME/.rbenv
   cd $HOME/.rbenv && src/configure && make -C src
+  cd $CURDIR
 
   echo "Setting up .zshrc"
   text="# enable rbenv
-  if [ -d "$HOME/.rbenv/" ]; then
-    export PATH="$HOME/.rbenv/bin:$PATH"
+  if [ -d \"\$HOME/.rbenv/\" ]; then
+    export PATH=\"\$HOME/.rbenv/bin:\$PATH\"
     eval \"\$(rbenv init - bash)\"
   fi
   "
   echo "$text" >> $HOME/.zshrc
-  source $HOME/.zshrc
+  # source $HOME/.zshrc
+
+  export PATH="$HOME/.rbenv/bin:$PATH"
+  eval "$(rbenv init - zsh)"
 
   echo "Installing ruby-build..."
   mkdir -p "$(rbenv root)"/plugins
@@ -21,9 +31,17 @@ if [! -d "$HOME/.rbenv/"]; then
 
   sudo apt install -y libssl-dev
   rbenv install 3.1.2
+  
+  # cancle the trap
+  trap - ERR
 fi
 
-echo "make sure we're inside a jekyll project"
+# assert if $(pwd)!=CURDIR
+if [ "$(pwd)" != "$CURDIR" ]; then
+  echo "not in the correct directory"
+  exit 1
+fi
+
 rbenv local 3.1.2
 gem install bundle
 bundle install
