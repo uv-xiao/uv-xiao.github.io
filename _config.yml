@@ -246,6 +246,7 @@ exclude:
   - _projects/
   - _news/
   - _posts_backup/
+  - .vscode/
 
 keep_files:
   - CNAME
