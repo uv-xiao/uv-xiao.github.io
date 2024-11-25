@@ -29,5 +29,11 @@
 			"</div>"
 		],
 		"description": "Insert a Jekyll figure block with caption"
-	}
+	},
+  "Insert slide": {
+    "scope": "markdown",
+    "prefix": "insert-slide",
+    "body": ["<iframe src=\"{{ site.url }}/assets/slide/$1\" width=\"100%\" height=\"500px\" frameborder=\"0\" allowfullscreen></iframe>"],
+    "description": "Insert a slide"
+  }
 }

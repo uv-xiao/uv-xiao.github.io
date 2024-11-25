@@ -11,7 +11,9 @@ fi
 title="$1"
 
 # get date
-date=$(date +"%Y-%m-%d")
+# date=$(date +"%Y-%m-%d")
+# set date to yesterday to avoid "has a future date"
+date=$(date -d "yesterday" +"%Y-%m-%d")
 # time=$(date +"%H:%M:%S")
 time="00:00:00" # set as 00:00:00 to avoid "has a future date"
 

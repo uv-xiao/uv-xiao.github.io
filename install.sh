@@ -51,5 +51,21 @@ pipx install jupyter
 
 gem pristine --all
 
+# if nvm is not installed(command -v nvm does not print nvm), install it
+if ! command -v nvm &> /dev/null
+then
+  wget -qO- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.1/install.sh | bash
+  source $HOME/.zshrc
+fi
+
+# if node is not installed, install it
+if ! node -v &> /dev/null
+then
+  nvm install node
+fi
+
+npm -v
+
+
 chmod +x ./localdeploy.sh
 chmod +x ./newpost.sh
