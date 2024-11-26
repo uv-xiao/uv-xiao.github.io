@@ -1,10 +1,10 @@
 name: Render slides
 
 on:
-  push:
-    branches: [ master, main ]
-    paths: 
-      - "_slide/**"
+  # push:
+  #   branches: [ master, main ]
+  #   paths: 
+  #     - "_slide/**"
 
 permissions:
   contents: write
