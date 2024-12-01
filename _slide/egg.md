@@ -45,11 +45,11 @@ $$
  \text{context\quad}   c &= \_ + (b + 0) \\
  \text{substitution\quad}
     \sigma &= \{x \mapsto a\} \\
+ \text{rewrite\quad}   l \to r &= (x+0) \to x \\
  \text{left of rewrite\quad}   l\sigma &= a + 0 \\
  \text{right of rewrite\quad}  r\sigma &= a \\
     &\text{now putting it all together...} \\
-    t = c[l\sigma] &= (a + 0) + (b + 0) \\
-    &\to \\
+    t = c[l\sigma] &= (a + 0) + (b + 0) \to \\ 
     c[r\sigma] &= a + (b + 0)
 \end{align*}
 $$ 
@@ -190,9 +190,10 @@ $$
 </style>
 
 An e-graph is a tuple $(U,M,H)$, where:
+- *Hashcons* $H$ is a map from e-nodes to e-class ids.
 - A *union-find* data structure $U$ stores equivalance retions e-class ids.
 - *E-class map* $M$ maps e-class ids to e-classes. All equivalent e-class ids map to the same e-class.
-- *Hashcons* $H$ is a map from e-nodes to e-class ids.
+
 
 </div>
 
@@ -1097,7 +1098,7 @@ Constraints:
   - Root constraints: 
    $$\sum_{x \in \text{Root}} v_x \geq 1$$
   - Class constraints
-   $$-v_x + \sum_{y \in C_i} v_y \geq 1$$ 
+   $$-v_x + \sum_{y \in C_i} v_y \geq 0$$ 
    for each child $C_i$ of $x$
   - Acyclic constraints
 </div>
@@ -1227,9 +1228,8 @@ $O(n \cdot 5^k \cdot k)$
 
 [ægraphs](https://github.com/bytecodealliance/rfcs/blob/main/accepted/cranelift-egraph.md)[[slide](https://cfallin.org/pubs/egraphs2023_aegraphs_slides.pdf)]
 
-- Why? 
-  - `gve->rle->gve->rle->...` 
-  - accepted in Cranelift compiler (part of Wasmtime)
+- accepted in Cranelift compiler 
+  - part of Wasmtime
 - Solution
   - e-graph + CFG skeleton
   - persistent immutable data structure
@@ -1359,9 +1359,8 @@ What instructions? [Babble](https://dl.acm.org/doi/10.1145/3571207)
 </div>
 </div>
 
----
 
-### What we need?
+<!-- ### What we need?
 
 > instruction finding from domain of applications
 
@@ -1371,4 +1370,4 @@ What instructions? [Babble](https://dl.acm.org/doi/10.1145/3571207)
 - learn instruction: 
   - what to learn? acceptable instr.? cost model?
   - how to learn? [Babble](https://dl.acm.org/doi/10.1145/3571207)?
-  - more efficient extraction?
+  - more efficient extraction? -->
