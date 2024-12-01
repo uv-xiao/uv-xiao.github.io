@@ -18,10 +18,8 @@ tikzjax: true
 pseudocode: true
 ---
 
-# Egg
-
 # Slide
 
 
-<iframe src="{{ site.url }}/assets/slide/sample" width="100%" height="500px" frameborder="0" allowfullscreen></iframe>
+<iframe src="{{ site.url }}/assets/slide/egg" width="100%" height="500px" frameborder="0" allowfullscreen></iframe>
 

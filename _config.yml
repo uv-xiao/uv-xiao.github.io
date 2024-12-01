@@ -250,6 +250,7 @@ exclude:
   - _posts_backup/
   - _pages_backup/
   - .vscode/
+  - _slide/
 
 keep_files:
   - CNAME

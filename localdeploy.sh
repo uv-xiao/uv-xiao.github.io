@@ -7,7 +7,14 @@ fi
 
 
 # run marp silently
-npx @marp-team/marp-cli@latest --watch _slide/ -I _slide/ -o assets/slide/ &
+# npx @marp-team/marp-cli@latest --watch _slide/ -I _slide/ -o assets/slide/ &
+npm exec -c "marp -c marp.config.mjs -I _slide/ -o assets/slide/"
+
+# cp _slide/*.[png/jpg] assets/slide/
+cp _slide/*.png assets/slide/
+cp _slide/*.jpg assets/slide/
+
+# start another thread for watching _slide/?
 
 # run jekyll serve silently
 bundle exec jekyll serve --lsi
