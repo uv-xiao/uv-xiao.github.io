@@ -47,7 +47,7 @@ gem install bundle
 bundle install
 
 python3 -m pip install --user pipx
-pipx install jupyter
+pipx install jupyter --include-deps
 
 gem pristine --all
 
