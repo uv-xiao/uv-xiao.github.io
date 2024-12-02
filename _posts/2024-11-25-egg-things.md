@@ -1,6 +1,6 @@
 ---
 layout: post
-title: Egg Things
+title: Learn e-graph, egg, and more
 date: 2024-11-25 00:00:00
 description:
 tags:
