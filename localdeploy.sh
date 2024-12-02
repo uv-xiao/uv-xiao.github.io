@@ -10,6 +10,11 @@ fi
 # npx @marp-team/marp-cli@latest --watch _slide/ -I _slide/ -o assets/slide/ &
 npm exec -c "marp -c marp.config.mjs -I _slide/ -o assets/slide/"
 
+# for every *.md file in _slide, convert to images
+for file in _slide/*.md; do
+  ./marpimg.sh $file
+done
+
 # cp _slide/*.[png/jpg] assets/slide/
 cp _slide/*.png assets/slide/
 cp _slide/*.jpg assets/slide/
