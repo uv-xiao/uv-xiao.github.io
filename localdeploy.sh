@@ -17,7 +17,6 @@ done
 
 # cp _slide/*.[png/jpg] assets/slide/
 cp _slide/*.png assets/slide/
-cp _slide/*.jpg assets/slide/
 
 # start another thread for watching _slide/?
 
