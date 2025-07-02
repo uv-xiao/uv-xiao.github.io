@@ -1,0 +1,46 @@
+[project]
+name = "uv-xiao.github.io"
+description = "Youwei Xiao's personal academic website built with Jekyll and al-folio theme"
+authors = ["Youwei Xiao"]
+channels = ["conda-forge"]
+platforms = ["linux-64", "osx-64", "osx-arm64"]
+
+[dependencies]
+ruby = ">=3.1,<3.4"
+nodejs = ">=20"
+python = ">=3.10"
+git = "*"
+compilers = "*"
+pkg-config = "*"
+make = "*"
+
+[pypi-dependencies]
+jupyter = "*"
+
+[tasks]
+# Install dependencies
+install = { cmd = "bash scripts/install.sh", description = "Install Ruby gems and npm packages" }
+
+# Development server
+serve = { cmd = "bash scripts/serve.sh", depends-on = ["install"], description = "Start Jekyll development server with live reload" }
+dev = { depends-on = ["serve"], description = "Alias for serve command" }
+
+# Content creation
+new-post = { cmd = "bash scripts/new-post.sh", depends-on = ["install"], description = "Create a new blog post" }
+
+# Marp slide operations
+build-slides = { cmd = "bash scripts/build-slides.sh", depends-on = ["install"], description = "Build all Marp slides to HTML" }
+slide-to-images = { cmd = "bash scripts/slide-to-images.sh", depends-on = ["install"], description = "Convert a slide to PNG images" }
+watch-slide = { cmd = "bash scripts/watch-slide.sh", depends-on = ["install"], description = "Watch and rebuild a specific slide file" }
+
+# Build operations
+build = { cmd = "bash scripts/build.sh", depends-on = ["install"], description = "Build the Jekyll site" }
+clean = { cmd = "bash scripts/clean.sh", description = "Clean the Jekyll build directory" }
+
+# Combined tasks
+full-build = { depends-on = ["build-slides", "build"], description = "Build slides and Jekyll site" }
+full-clean = { depends-on = ["clean"], cmd = "rm -rf assets/slide/*.html assets/slide_img/*.png", description = "Clean Jekyll build and slide outputs" }
+
+# Workflow tasks
+setup = { depends-on = ["install"], description = "Initial project setup" }
+rebuild = { depends-on = ["clean", "full-build"], description = "Clean and rebuild everything" }

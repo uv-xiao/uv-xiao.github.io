@@ -12,3 +12,12 @@ node_modules/
 vendor
 .idea
 .preview.marp.html
+
+# Pixi
+.pixi/
+pixi.lock
+
+# Temporary files
+google-chrome-stable_current_amd64.deb
+*.log
+*.bak
