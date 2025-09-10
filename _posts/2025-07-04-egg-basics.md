@@ -165,7 +165,7 @@ graph TB
         B1 --> B2["(a * 2) / 2"]
         B1 --> B3["(a << 1) / 2"]
         B1 --> B4["a"]
-        B1 --> B5["..."]]
+        B1 --> B5["..."]
         style B1 fill:#ccffcc,stroke:#00ff00,stroke-width:2px
     end
 ```

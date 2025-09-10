@@ -18,6 +18,17 @@ tikzjax: true
 pseudocode: true
 ---
 
+> 不到两个月过去，很多国内国外的LLM Agentic CLI陆续出现了(QWen Code,Trae Agent, etc.). 我就不做比较和更新了，毕竟简单的日常任务也不是很能体现模型能力。ZZW过去两个月每天都在用这个激励系统，可视化了一下得分：
+{: .block-tip }
+
+
+<div class="row mt-3">
+    <div class="col-sm mt-3 mt-md-0">
+        {% include figure.liquid loading="eager" path="assets/img/in_posts/points_trend_20250824.png" class="img-fluid rounded z-depth-1" %}
+    </div>
+</div>
+
+
 这篇文章记录了我用LLM agents开发一个极简应用（甚至谈不上应用，只是一个简单的程序），~~用来激励女票的考公复习~~。因为考公这个事也非常中国特色，代码也都是中文，所以这个blog也就不用~~翻译成~~英文了。
 
 当前效果：[github.com/uv-xiao/cse-incentive-agent](https://github.com/uv-xiao/cse-incentive-agent)
