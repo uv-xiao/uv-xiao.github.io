@@ -247,8 +247,6 @@ exclude:
   - localdeploy.sh
   - _projects/
   - _news/
-  - _posts_backup/
-  - _pages_backup/
   - .vscode/
   - _slide/
 

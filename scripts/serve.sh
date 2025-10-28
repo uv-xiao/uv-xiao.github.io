@@ -10,20 +10,23 @@ if lsof -t -i:4000 > /dev/null 2>&1; then
     exit 1
 fi
 
-# Build slides first
-echo "Building slides..."
-npm exec -c "marp -c marp.config.mjs -I _slide/ -o assets/slide/"
+# Build slides only if _slide directory exists and has markdown files
+if [ -d "_slide" ] && find _slide -name "*.md" -type f | grep -q .; then
+    echo "Building slides..."
+    npm exec -c "marp -c marp.config.mjs -I _slide/ -o assets/slide/"
 
-# # Convert all slides to images
-# for file in _slide/*.md; do
-#     if [ -f "$file" ]; then
-#         bash ./scripts/slide-to-images.sh "$file"
-#     fi
-# done
-
-# Copy slide images
-if ls _slide/*.png >/dev/null 2>&1; then
-    cp _slide/*.png assets/slide/
+    # Copy any image files from _slide to assets/slide, preserving directory structure
+    image_files=$(find _slide -type f \( -name "*.png" -o -name "*.jpg" -o -name "*.jpeg" -o -name "*.gif" -o -name "*.svg" \))
+    if [ -n "$image_files" ]; then
+        echo "Copying slide images..."
+        echo "$image_files" | while read -r img_file; do
+            # Get relative path and create destination directory if needed
+            rel_path="${img_file#_slide/}"
+            dest_dir="assets/slide/$(dirname "$rel_path")"
+            mkdir -p "$dest_dir"
+            cp "$img_file" "assets/slide/$rel_path"
+        done
+    fi
 fi
 
 # Start Jekyll server

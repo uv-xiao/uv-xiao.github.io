@@ -22,19 +22,19 @@ jupyter = "*"
 install = { cmd = "bash scripts/install.sh", description = "Install Ruby gems and npm packages" }
 
 # Development server
-serve = { cmd = "bash scripts/serve.sh", depends-on = ["install"], description = "Start Jekyll development server with live reload" }
+serve = { cmd = "bash scripts/serve.sh", description = "Start Jekyll development server with live reload" }
 dev = { depends-on = ["serve"], description = "Alias for serve command" }
 
 # Content creation
-new-post = { cmd = "bash scripts/new-post.sh", depends-on = ["install"], description = "Create a new blog post" }
+new-post = { cmd = "bash scripts/new-post.sh", description = "Create a new blog post" }
 
 # Marp slide operations
-build-slides = { cmd = "bash scripts/build-slides.sh", depends-on = ["install"], description = "Build all Marp slides to HTML" }
-slide-to-images = { cmd = "bash scripts/slide-to-images.sh", depends-on = ["install"], description = "Convert a slide to PNG images" }
-watch-slide = { cmd = "bash scripts/watch-slide.sh", depends-on = ["install"], description = "Watch and rebuild a specific slide file" }
+build-slides = { cmd = "bash scripts/build-slides.sh", description = "Build all Marp slides to HTML" }
+slide-to-images = { cmd = "bash scripts/slide-to-images.sh", description = "Convert a slide to PNG images" }
+watch-slide = { cmd = "bash scripts/watch-slide.sh", description = "Watch and rebuild a specific slide file" }
 
 # Build operations
-build = { cmd = "bash scripts/build.sh", depends-on = ["install"], description = "Build the Jekyll site" }
+build = { cmd = "bash scripts/build.sh", description = "Build the Jekyll site" }
 clean = { cmd = "bash scripts/clean.sh", description = "Clean the Jekyll build directory" }
 
 # Combined tasks

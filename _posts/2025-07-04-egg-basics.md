@@ -17,7 +17,7 @@ tikzjax: true
 pseudocode: true
 ---
 
-<iframe src="{{ site.url }}/assets/slide/egg" width="100%" height="500px" frameborder="0" allowfullscreen></iframe>
+<iframe src="{{ site.url }}/assets/slide/presentations/egg-basic/egg" width="100%" height="500px" frameborder="0" allowfullscreen></iframe>
 
 I still remember my first serious attempt at writing a compiler optimizer. I had this clever rule: `(a * 2) / 2 → a`. Simple, right? But then I realized that by eagerly applying it, I was destroying the pattern `(a * 2)` that another rule needed for vectorization. This is the optimizer's eternal dilemma: every choice you make closes doors to other opportunities.
 
