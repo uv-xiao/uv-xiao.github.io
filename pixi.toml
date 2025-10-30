@@ -1,4 +1,4 @@
-[project]
+[workspace]
 name = "uv-xiao.github.io"
 description = "Youwei Xiao's personal academic website built with Jekyll and al-folio theme"
 authors = ["Youwei Xiao"]
