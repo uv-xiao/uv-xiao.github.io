@@ -1,4 +1,504 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en"><generator uri="https://jekyllrb.com/" version="4.3.4">Jekyll</generator><link href="https://uv-xiao.github.io/feed.xml" rel="self" type="application/atom+xml"/><link href="https://uv-xiao.github.io/" rel="alternate" type="text/html" hreflang="en"/><updated>2025-11-25T07:28:13+00:00</updated><id>https://uv-xiao.github.io/feed.xml</id><title type="html">uv-xiao</title><subtitle>Ph.D. candidate at Peking University focusing on software techniques for architecture-hardware co-specialization. </subtitle><entry><title type="html">Inside Mirage (1) - Superoptimizing Tensor Programs via MuGraph and Search</title><link href="https://uv-xiao.github.io/blog/2025/mirage-ir-search/" rel="alternate" type="text/html" title="Inside Mirage (1) - Superoptimizing Tensor Programs via MuGraph and Search"/><published>2025-11-24T00:00:00+00:00</published><updated>2025-11-24T00:00:00+00:00</updated><id>https://uv-xiao.github.io/blog/2025/mirage-ir-search</id><content type="html" xml:base="https://uv-xiao.github.io/blog/2025/mirage-ir-search/"><![CDATA[<p>In the world of Large Language Models (LLMs), theoretical FLOPs often take a backseat to heterogenous processing units and memory hierarchies. <strong>Mirage</strong> is a tensor algebra superoptimizer. Instead of relying on static, hand-written fusion rules, Mirage <strong>searches</strong> the space of potential GPU kernels to automatically discover highly optimized, fused implementations that efficiently exploit GPU resources and memory hierarchies.</p> <p>In this post, we will tear down the architecture of Mirage. We will set up a development environment (even without a GPU), explore the <strong>MuGraph</strong> intermediate representation, and dissect the <strong>Search Algorithms</strong> that drive the optimization.</p> <blockquote> <p><strong>Note:</strong> This post follows the hands-on <a href="https://github.com/arch-of-shadow/mirage/tree/uv_tutorial_00">Mirage Tutorial (uv_tutorial_00 branch)</a>.</p> </blockquote> <hr/> <h2 id="chapter-0-environment-setup">Chapter 0: Environment Setup</h2> <p>This chapter only provides the Docker-based installation. The advantage is that it can be run without local GPUs!</p> <p>You can also adopt alternatives for installation, according to <a href="https://github.com/arch-of-shadow/mirage/tree/uv_tutorial_00/INSTALL.md">INSTALL.md</a>.</p> <h3 id="0-prerequisite">0. Prerequisite</h3> <p>Clone the mirage repo recursively.</p> <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>git clone <span class="nt">--recursive</span> https://www.github.com/mirage-project/mirage
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en"><generator uri="https://jekyllrb.com/" version="4.3.4">Jekyll</generator><link href="https://uv-xiao.github.io/feed.xml" rel="self" type="application/atom+xml"/><link href="https://uv-xiao.github.io/" rel="alternate" type="text/html" hreflang="en"/><updated>2025-11-25T17:55:04+00:00</updated><id>https://uv-xiao.github.io/feed.xml</id><title type="html">uv-xiao</title><subtitle>Ph.D. candidate at Peking University focusing on software techniques for architecture-hardware co-specialization. </subtitle><entry><title type="html">Inside Mirage (2) - Transpiler from MuGraph to CUDA</title><link href="https://uv-xiao.github.io/blog/2025/mirage-transpiler-cuda/" rel="alternate" type="text/html" title="Inside Mirage (2) - Transpiler from MuGraph to CUDA"/><published>2025-11-25T00:00:00+00:00</published><updated>2025-11-25T00:00:00+00:00</updated><id>https://uv-xiao.github.io/blog/2025/mirage-transpiler-cuda</id><content type="html" xml:base="https://uv-xiao.github.io/blog/2025/mirage-transpiler-cuda/"><![CDATA[<p>In this blog, we dive deep into <strong>Mirage’s Transpiler</strong>, the component responsible for translating optimized MuGraph representations into efficient CUDA code. The transpiler bridges the gap between the high-level graph representation and low-level GPU execution.</p> <blockquote> <p>This chapter is based on <a href="https://github.com/arch-of-shadow/mirage/tree/uv_tutorial_00/docs/transpiler/transpiler.md"><code class="language-plaintext highlighter-rouge">docs/transpiler/transpiler.md</code></a>. It is very nice and detailed. I recommend reading it first to get the algorithm insights.</p> </blockquote> <blockquote> <p>For Runtime knowledge, I learned from <a href="https://www.zhihu.com/collection/694786845">Zhihu</a> and <a href="https://mp.weixin.qq.com/s/sVjLJMHGpeSuLFaKOmBeow">Weixin</a>.</p> </blockquote> <blockquote> <p><strong>Note:</strong> This post follows the hands-on <a href="https://github.com/arch-of-shadow/mirage/tree/uv_tutorial_00">Mirage Tutorial (uv_tutorial_00 branch)</a>.</p> </blockquote> <hr/> <h2 id="1-overview">1. Overview</h2> <p>The transpiler takes a kernel graph (potentially containing custom threadblock graphs) and generates optimized CUDA code. This is both an <strong>algorithmic challenge</strong> (deciding tensor layouts, memory allocation, scheduling) and an <strong>engineering challenge</strong> (maintaining correctness while maximizing performance).</p> <h3 id="11-architecture">1.1 Architecture</h3> <p>The transpiler consists of two major components:</p> <ol> <li><strong>The Transpiler</strong> (<code class="language-plaintext highlighter-rouge">src/transpiler/</code>): Translates MuGraph into CUDA code</li> <li><strong>The Runtime</strong> (<code class="language-plaintext highlighter-rouge">include/mirage/transpiler/runtime/</code>): Header-only library providing optimized kernels for the generated code</li> </ol> <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>┌─────────────────────┐
+│   Kernel Graph      │
+│   (MuGraph)         │
+└─────────┬───────────┘
+          │
+          ▼
+┌─────────────────────┐
+│   Transpiler        │
+│  ┌───────────────┐  │
+│  │ Fusion        │  │
+│  │ Resolution    │  │
+│  └───────┬───────┘  │
+│          ▼          │
+│  ┌───────────────┐  │
+│  │ Layout        │  │
+│  │ Resolution    │  │
+│  └───────┬───────┘  │
+│          ▼          │
+│  ┌───────────────┐  │
+│  │ TB Graph      │  │
+│  │ Scheduling    │  │
+│  └───────┬───────┘  │
+│          ▼          │
+│  ┌───────────────┐  │
+│  │ Swizzle       │  │
+│  │ Planning      │  │
+│  └───────┬───────┘  │
+│          ▼          │
+│  ┌───────────────┐  │
+│  │ Memory        │  │
+│  │ Planning      │  │
+│  └───────┬───────┘  │
+│          ▼          │
+│  ┌───────────────┐  │
+│  │ Code          │  │
+│  │ Generation    │  │
+│  └───────────────┘  │
+└─────────┬───────────┘
+          │
+          ▼
+┌─────────────────────┐
+│   Generated CUDA    │
+│   + Runtime Headers │
+└─────────────────────┘
+</code></pre></div></div> <h3 id="12-source-code-structure">1.2 Source Code Structure</h3> <p>The transpiler source code is organized as follows:</p> <table> <thead> <tr> <th>File</th> <th>Purpose</th> </tr> </thead> <tbody> <tr> <td><code class="language-plaintext highlighter-rouge">transpile.cc</code></td> <td>Main entry point, graph preprocessing</td> </tr> <tr> <td><code class="language-plaintext highlighter-rouge">resolve_tb_fusion.cc</code></td> <td>Threadblock-level operator fusion</td> </tr> <tr> <td><code class="language-plaintext highlighter-rouge">resolve_tensor_layout.cc</code></td> <td>Layout resolution using Z3 solver</td> </tr> <tr> <td><code class="language-plaintext highlighter-rouge">sched_tb_graph.cc</code></td> <td>Threadblock graph scheduling</td> </tr> <tr> <td><code class="language-plaintext highlighter-rouge">plan_tb_swizzle.cc</code></td> <td>Swizzle planning to avoid bank conflicts</td> </tr> <tr> <td><code class="language-plaintext highlighter-rouge">plan_dtensor_memory.cc</code></td> <td>Global memory planning for DTensors</td> </tr> <tr> <td><code class="language-plaintext highlighter-rouge">plan_stensor_memory.cc</code></td> <td>Shared memory planning for STensors</td> </tr> <tr> <td><code class="language-plaintext highlighter-rouge">transpiler_kn.cc</code></td> <td>Kernel-level code generation</td> </tr> <tr> <td><code class="language-plaintext highlighter-rouge">transpiler_tb.cc</code></td> <td>Threadblock-level code generation</td> </tr> <tr> <td><code class="language-plaintext highlighter-rouge">transpiler_tb_hopper.cc</code></td> <td>Hopper-specific code generation</td> </tr> <tr> <td><code class="language-plaintext highlighter-rouge">transpiler_tb_blackwell.cc</code></td> <td>Blackwell-specific code generation</td> </tr> </tbody> </table> <h3 id="13-transpiler-pipeline">1.3 Transpiler Pipeline</h3> <p>The transpilation process follows these steps (from <code class="language-plaintext highlighter-rouge">transpiler.h</code>):</p> <div class="language-cpp highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">TranspileResult</span> <span class="nf">generate_code</span><span class="p">()</span> <span class="p">{</span>
+  <span class="k">this</span><span class="o">-&gt;</span><span class="n">resolve_distributed_config</span><span class="p">();</span>  <span class="c1">// Multi-GPU configuration</span>
+  <span class="k">this</span><span class="o">-&gt;</span><span class="n">resolve_dtensor_meta</span><span class="p">();</span>        <span class="c1">// Gather tensor metadata</span>
+  <span class="k">this</span><span class="o">-&gt;</span><span class="n">resolve_tb_fusion</span><span class="p">();</span>           <span class="c1">// Plan operator fusion</span>
+  <span class="k">this</span><span class="o">-&gt;</span><span class="n">resolve_tensor_layout</span><span class="p">();</span>       <span class="c1">// Decide tensor layouts</span>
+  <span class="k">this</span><span class="o">-&gt;</span><span class="n">plan_dtensor_memory</span><span class="p">();</span>         <span class="c1">// Allocate global memory</span>
+  <span class="k">return</span> <span class="k">this</span><span class="o">-&gt;</span><span class="n">transpile_ugraph</span><span class="p">();</span>     <span class="c1">// Generate CUDA code</span>
+<span class="p">}</span>
+</code></pre></div></div> <h2 id="2-threadblock-level-data-fusion">2. Threadblock-Level Data Fusion</h2> <p>The first step is deciding which operators can be fused together to reduce memory traffic.</p> <h3 id="21-the-problem">2.1 The Problem</h3> <p>In threadblock-level code, operators read from shared memory, compute, and write back. Fusion avoids intermediate memory operations:</p> <p><strong>Without Fusion:</strong></p> <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Matmul: Read A, B → Compute → Write C to SMEM
+Exp:    Read C from SMEM → Compute → Write D to SMEM
+</code></pre></div></div> <p><strong>With Fusion:</strong></p> <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Matmul+Exp: Read A, B → Compute Matmul → Apply Exp in registers → Write D to SMEM
+</code></pre></div></div> <h3 id="22-fusion-rules">2.2 Fusion Rules</h3> <p>Currently, Mirage fuses <strong>unary elementwise operators</strong> with their predecessor when:</p> <ol> <li>The predecessor has exactly one consumer</li> <li>The predecessor is not an input op with <code class="language-plaintext highlighter-rouge">forloop_dim = -1</code></li> <li>The predecessor is not a forloop accumulator (the loop body vs. outside the loop)</li> <li>The predecessor is not a reduction max op (which has two outputs)</li> </ol> <p><strong>Code Reference</strong> (<code class="language-plaintext highlighter-rouge">src/transpiler/resolve_tb_fusion.cc:39-65</code>):</p> <div class="language-cpp highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">// Currently we only fuse elementwise unary operators and</span>
+<span class="c1">// forloop_accum_no_red with the previous operator</span>
+<span class="k">for</span> <span class="p">(</span><span class="n">tb</span><span class="o">::</span><span class="n">TBOperator</span> <span class="o">*</span><span class="k">const</span> <span class="n">op</span> <span class="o">:</span> <span class="n">tb_graph</span><span class="p">.</span><span class="n">operators</span><span class="p">)</span> <span class="p">{</span>
+  <span class="k">if</span> <span class="p">((</span><span class="n">type</span><span class="o">::</span><span class="n">is_threadblock_element_unary</span><span class="p">(</span><span class="n">op</span><span class="o">-&gt;</span><span class="n">op_type</span><span class="p">))</span> <span class="o">||</span>
+      <span class="p">(</span><span class="n">op</span><span class="o">-&gt;</span><span class="n">op_type</span> <span class="o">==</span> <span class="n">type</span><span class="o">::</span><span class="n">TB_FORLOOP_ACCUM_NO_RED_OP</span><span class="p">))</span> <span class="p">{</span>
+    <span class="n">tb</span><span class="o">::</span><span class="n">STensor</span> <span class="k">const</span> <span class="o">&amp;</span><span class="n">input0</span> <span class="o">=</span> <span class="n">op</span><span class="o">-&gt;</span><span class="n">input_tensors</span><span class="p">.</span><span class="n">at</span><span class="p">(</span><span class="mi">0</span><span class="p">);</span>
+    <span class="n">tb</span><span class="o">::</span><span class="n">TBOperator</span> <span class="o">*</span><span class="n">prev_op</span> <span class="o">=</span> <span class="n">input0</span><span class="p">.</span><span class="n">owner_op</span><span class="p">;</span>
+    <span class="c1">// Check various conditions...</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">num_consumers</span><span class="p">.</span><span class="n">at</span><span class="p">(</span><span class="n">input0</span><span class="p">.</span><span class="n">guid</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span> <span class="o">&amp;&amp;</span>
+        <span class="n">prev_op</span><span class="o">-&gt;</span><span class="n">op_type</span> <span class="o">!=</span> <span class="n">type</span><span class="o">::</span><span class="n">TB_FORLOOP_ACCUM_NO_RED_OP</span> <span class="o">&amp;&amp;</span>
+        <span class="n">prev_op</span><span class="o">-&gt;</span><span class="n">op_type</span> <span class="o">!=</span> <span class="n">type</span><span class="o">::</span><span class="n">TB_INPUT_OP</span> <span class="o">&amp;&amp;</span>
+        <span class="cm">/* ... other conditions ... */</span><span class="p">)</span> <span class="p">{</span>
+      <span class="n">is_fused_with_prev</span><span class="p">[</span><span class="n">op</span><span class="p">]</span> <span class="o">=</span> <span class="nb">true</span><span class="p">;</span>
+      <span class="n">is_fused_with_next</span><span class="p">[</span><span class="n">prev_op</span><span class="p">]</span> <span class="o">=</span> <span class="nb">true</span><span class="p">;</span>
+    <span class="p">}</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div></div> <h3 id="23-fusion-chains">2.3 Fusion Chains</h3> <p>After determining fusion relationships, operators are grouped into <strong>chains</strong>:</p> <div class="language-cpp highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">// Construct `fusion_chain`</span>
+<span class="k">for</span> <span class="p">(</span><span class="n">tb</span><span class="o">::</span><span class="n">TBOperator</span> <span class="o">*</span><span class="k">const</span> <span class="n">last_op</span> <span class="o">:</span> <span class="n">tb_graph</span><span class="p">.</span><span class="n">operators</span><span class="p">)</span> <span class="p">{</span>
+  <span class="k">if</span> <span class="p">(</span><span class="n">is_fused_with_next</span><span class="p">[</span><span class="n">last_op</span><span class="p">])</span> <span class="k">continue</span><span class="p">;</span>
+  <span class="c1">// Now last_op is the tail of a fusion chain</span>
+  <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">tb</span><span class="o">::</span><span class="n">TBOperator</span> <span class="k">const</span> <span class="o">*&gt;</span> <span class="n">fused_ops</span><span class="p">;</span>
+  <span class="n">tb</span><span class="o">::</span><span class="n">TBOperator</span> <span class="o">*</span><span class="n">cur_op</span> <span class="o">=</span> <span class="n">last_op</span><span class="p">;</span>
+  <span class="k">while</span> <span class="p">(</span><span class="nb">true</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">fused_ops</span><span class="p">.</span><span class="n">push_back</span><span class="p">(</span><span class="n">cur_op</span><span class="p">);</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">is_fused_with_prev</span><span class="p">[</span><span class="n">cur_op</span><span class="p">])</span> <span class="p">{</span>
+      <span class="n">cur_op</span> <span class="o">=</span> <span class="n">cur_op</span><span class="o">-&gt;</span><span class="n">input_tensors</span><span class="p">.</span><span class="n">at</span><span class="p">(</span><span class="mi">0</span><span class="p">).</span><span class="n">owner_op</span><span class="p">;</span>
+    <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+      <span class="k">break</span><span class="p">;</span>
+    <span class="p">}</span>
+  <span class="p">}</span>
+  <span class="n">std</span><span class="o">::</span><span class="n">reverse</span><span class="p">(</span><span class="n">fused_ops</span><span class="p">.</span><span class="n">begin</span><span class="p">(),</span> <span class="n">fused_ops</span><span class="p">.</span><span class="n">end</span><span class="p">());</span>
+  <span class="n">fusion_chain</span><span class="p">[</span><span class="n">leading_op</span><span class="p">]</span> <span class="o">=</span> <span class="n">fused_ops</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div></div> <p><strong>Example Chain:</strong></p> <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Matmul → Exp → Square → Store
+  ↑
+Leading Op    Fused Ops →
+</code></pre></div></div> <h2 id="3-layout-resolution">3. Layout Resolution</h2> <p>Tensor layout (the stride of each dimension) critically affects performance. The transpiler uses the <strong>Z3 SMT solver</strong> to find optimal layouts.</p> <h3 id="31-problem-formulation">3.1 Problem Formulation</h3> <p>For each tensor dimension, we create boolean variables:</p> <ul> <li><code class="language-plaintext highlighter-rouge">di_x_y</code>: Is dimension y of DTensor x the innermost dimension?</li> <li><code class="language-plaintext highlighter-rouge">si_x_y</code>: Is dimension y of STensor x the innermost dimension?</li> <li><code class="language-plaintext highlighter-rouge">sw_x_y</code>: Is dimension y of STensor x swizzled?</li> </ul> <h3 id="32-constraints">3.2 Constraints</h3> <p><strong>Hard constraints</strong> (must be satisfied):</p> <ol> <li>Each tensor has exactly one innermost dimension</li> <li>Each STensor has at most one swizzled dimension</li> <li>The innermost dimension cannot be swizzled</li> <li>Matmul inputs/outputs must have innermost dim in last two dimensions</li> <li>Input tensors must match the user-provided stride layout</li> </ol> <p><strong>Code Reference</strong> (<code class="language-plaintext highlighter-rouge">src/transpiler/resolve_tensor_layout.cc:179-216</code>):</p> <div class="language-cpp highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">for</span> <span class="p">(</span><span class="n">kn</span><span class="o">::</span><span class="n">DTensor</span> <span class="k">const</span> <span class="o">&amp;</span><span class="n">dtensor</span> <span class="o">:</span> <span class="n">all_dtensors</span><span class="p">)</span> <span class="p">{</span>
+  <span class="c1">// Every DTensor can only have 1 innermost dim</span>
+  <span class="n">z3</span><span class="o">::</span><span class="n">expr_vector</span> <span class="n">innermost_exprs</span><span class="p">(</span><span class="n">ctx</span><span class="p">);</span>
+  <span class="k">for</span> <span class="p">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">num_dims</span><span class="p">;</span> <span class="o">++</span><span class="n">i</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">innermost_exprs</span><span class="p">.</span><span class="n">push_back</span><span class="p">(</span><span class="n">d_is_innermost</span><span class="p">[</span><span class="n">dtensor</span><span class="p">.</span><span class="n">guid</span><span class="p">][</span><span class="n">i</span><span class="p">]);</span>
+  <span class="p">}</span>
+  <span class="n">opt</span><span class="p">.</span><span class="n">add</span><span class="p">(</span><span class="n">z3</span><span class="o">::</span><span class="n">atmost</span><span class="p">(</span><span class="n">innermost_exprs</span><span class="p">,</span> <span class="mi">1</span><span class="p">));</span>
+  <span class="n">opt</span><span class="p">.</span><span class="n">add</span><span class="p">(</span><span class="n">z3</span><span class="o">::</span><span class="n">atleast</span><span class="p">(</span><span class="n">innermost_exprs</span><span class="p">,</span> <span class="mi">1</span><span class="p">));</span>
+<span class="p">}</span>
+
+<span class="c1">// For matmul, innermost must be in last two dims</span>
+<span class="k">for</span> <span class="p">(</span><span class="n">kn</span><span class="o">::</span><span class="n">DTensor</span> <span class="k">const</span> <span class="o">&amp;</span><span class="n">tensor</span> <span class="o">:</span> <span class="p">{</span><span class="n">lhs</span><span class="p">,</span> <span class="n">rhs</span><span class="p">,</span> <span class="n">output</span><span class="p">})</span> <span class="p">{</span>
+  <span class="kt">int</span> <span class="n">num_dims</span> <span class="o">=</span> <span class="n">tensor</span><span class="p">.</span><span class="n">num_dims</span><span class="p">;</span>
+  <span class="n">opt</span><span class="p">.</span><span class="n">add</span><span class="p">(</span><span class="n">d_is_innermost</span><span class="p">[</span><span class="n">tensor</span><span class="p">.</span><span class="n">guid</span><span class="p">][</span><span class="n">num_dims</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span> <span class="o">||</span>
+          <span class="n">d_is_innermost</span><span class="p">[</span><span class="n">tensor</span><span class="p">.</span><span class="n">guid</span><span class="p">][</span><span class="n">num_dims</span> <span class="o">-</span> <span class="mi">2</span><span class="p">]);</span>
+<span class="p">}</span>
+</code></pre></div></div> <h3 id="33-cost-model">3.3 Cost Model</h3> <p>The optimizer minimizes a cost function:</p> <table> <thead> <tr> <th>Scenario</th> <th>Cost</th> </tr> </thead> <tbody> <tr> <td>Input without wide copy</td> <td>4000</td> </tr> <tr> <td>Output without wide copy</td> <td>4000</td> </tr> <tr> <td>Matmul without ldmatrix</td> <td>10000</td> </tr> <tr> <td>Input without cp.async</td> <td>20000</td> </tr> <tr> <td>Swizzling a dimension</td> <td>1000</td> </tr> <tr> <td>Shared memory usage</td> <td>1 per byte</td> </tr> </tbody> </table> <p><strong>Code Reference</strong> (<code class="language-plaintext highlighter-rouge">src/transpiler/resolve_tensor_layout.cc:51-76</code>):</p> <div class="language-cpp highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">namespace</span> <span class="n">cost</span> <span class="p">{</span>
+<span class="n">cost_t</span> <span class="n">KN_REDUCTION_INNERMOST_EQ_REDUC_DIM</span> <span class="o">=</span> <span class="mi">4000</span><span class="p">;</span>
+<span class="n">cost_t</span> <span class="n">TB_INPUT_NO_WIDE_COPY</span> <span class="o">=</span> <span class="mi">4000</span><span class="p">;</span>
+<span class="n">cost_t</span> <span class="n">TB_OUTPUT_NO_WIDE_COPY</span> <span class="o">=</span> <span class="mi">4000</span><span class="p">;</span>
+<span class="n">cost_t</span> <span class="n">TB_MATMUL_NO_LDMATRIX</span> <span class="o">=</span> <span class="mi">10000</span><span class="p">;</span>
+<span class="n">cost_t</span> <span class="n">TB_INPUT_NO_CP_ASYNC</span> <span class="o">=</span> <span class="mi">20000</span><span class="p">;</span>
+<span class="n">cost_t</span> <span class="n">SWIZZLE_DIM</span> <span class="o">=</span> <span class="mi">1000</span><span class="p">;</span>
+<span class="n">cost_t</span> <span class="n">SMEM_FACTOR</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div></div> <h3 id="34-stride-calculation">3.4 Stride Calculation</h3> <p>After determining innermost dimensions, strides are calculated:</p> <div class="language-cpp highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kt">void</span> <span class="nf">calc_tensor_strides</span><span class="p">(</span><span class="kt">size_t</span> <span class="o">*</span><span class="n">strides</span><span class="p">,</span> <span class="kt">size_t</span> <span class="o">&amp;</span><span class="n">num_phy_elems</span><span class="p">,</span>
+                         <span class="kt">int</span> <span class="n">num_dims</span><span class="p">,</span> <span class="kt">int</span> <span class="k">const</span> <span class="n">dims</span><span class="p">[],</span>
+                         <span class="kt">int</span> <span class="n">innermost_dim</span><span class="p">,</span> <span class="kt">int</span> <span class="n">datatype_size</span><span class="p">)</span> <span class="p">{</span>
+  <span class="c1">// Order: [innermost, N-1, N-2, ..., innermost+1, innermost-1, ..., 0]</span>
+  <span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="n">dim_order</span> <span class="o">=</span> <span class="p">{</span><span class="n">innermost_dim</span><span class="p">};</span>
+  <span class="k">for</span> <span class="p">(</span><span class="kt">int</span> <span class="n">i</span> <span class="o">=</span> <span class="n">num_dims</span> <span class="o">-</span> <span class="mi">1</span><span class="p">;</span> <span class="n">i</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">;</span> <span class="o">--</span><span class="n">i</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">i</span> <span class="o">!=</span> <span class="n">innermost_dim</span><span class="p">)</span> <span class="n">dim_order</span><span class="p">.</span><span class="n">push_back</span><span class="p">(</span><span class="n">i</span><span class="p">);</span>
+  <span class="p">}</span>
+
+  <span class="kt">size_t</span> <span class="n">alignment</span> <span class="o">=</span> <span class="n">std</span><span class="o">::</span><span class="n">max</span><span class="p">(</span><span class="mi">16</span> <span class="o">/</span> <span class="n">datatype_size</span><span class="p">,</span> <span class="mi">1</span><span class="p">);</span>
+  <span class="kt">size_t</span> <span class="n">cur_stride</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
+  <span class="k">for</span> <span class="p">(</span><span class="kt">int</span> <span class="n">dim_idx</span> <span class="o">:</span> <span class="n">dim_order</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">strides</span><span class="p">[</span><span class="n">dim_idx</span><span class="p">]</span> <span class="o">=</span> <span class="n">cur_stride</span><span class="p">;</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">dims</span><span class="p">[</span><span class="n">dim_idx</span><span class="p">]</span> <span class="o">!=</span> <span class="mi">1</span><span class="p">)</span> <span class="p">{</span>
+      <span class="c1">// Pad first non-1 dimension to 16-byte alignment</span>
+      <span class="n">cur_stride</span> <span class="o">*=</span> <span class="n">round_to_multiple</span><span class="p">((</span><span class="kt">size_t</span><span class="p">)</span><span class="n">dims</span><span class="p">[</span><span class="n">dim_idx</span><span class="p">],</span> <span class="n">alignment</span><span class="p">);</span>
+    <span class="p">}</span>
+  <span class="p">}</span>
+  <span class="n">num_phy_elems</span> <span class="o">=</span> <span class="n">cur_stride</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div></div> <p><strong>Example:</strong></p> <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Shape: [4, 8, 16], innermost_dim = 2, dtype = half (2 bytes)
+Order: [2, 1, 0]
+Strides: [128, 16, 1]  (dim 2 padded: 16 → 16, dim 1: 16*8=128)
+</code></pre></div></div> <h2 id="4-threadblock-graph-scheduling">4. Threadblock Graph Scheduling</h2> <p>The scheduler determines the order of operator execution within a threadblock.</p> <h3 id="41-objectives">4.1 Objectives</h3> <ol> <li><strong>Minimize synchronizations</strong> (<code class="language-plaintext highlighter-rouge">__syncthreads()</code>)</li> <li><strong>Minimize peak shared memory usage</strong></li> </ol> <p>These can conflict - the scheduler prioritizes fewer synchronizations.</p> <h3 id="42-algorithm-modified-topological-sort">4.2 Algorithm: Modified Topological Sort</h3> <p>Each operator is assigned a <strong>depth</strong> (longest path from any input):</p> <div class="language-cpp highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">// Calculate depth using dynamic programming</span>
+<span class="k">for</span> <span class="p">(</span><span class="n">tb</span><span class="o">::</span><span class="n">TBOperator</span> <span class="o">*</span><span class="k">const</span> <span class="n">op</span> <span class="o">:</span> <span class="n">tb_graph</span><span class="p">.</span><span class="n">operators</span><span class="p">)</span> <span class="p">{</span>
+  <span class="k">if</span> <span class="p">(</span><span class="n">op</span><span class="o">-&gt;</span><span class="n">op_type</span> <span class="o">==</span> <span class="n">type</span><span class="o">::</span><span class="n">TB_INPUT_OP</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">op2chaining_meta</span><span class="p">[</span><span class="n">op</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="mi">0</span><span class="p">,</span> <span class="n">next_chain_idx</span><span class="o">++</span><span class="p">,</span> <span class="mi">0</span><span class="p">};</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+<span class="k">for</span> <span class="p">(</span><span class="n">tb</span><span class="o">::</span><span class="n">TBOperator</span> <span class="o">*</span><span class="k">const</span> <span class="n">op</span> <span class="o">:</span> <span class="n">tb_graph</span><span class="p">.</span><span class="n">operators</span><span class="p">)</span> <span class="p">{</span>
+  <span class="k">if</span> <span class="p">(</span><span class="n">op</span><span class="o">-&gt;</span><span class="n">op_type</span> <span class="o">==</span> <span class="n">type</span><span class="o">::</span><span class="n">TB_INPUT_OP</span><span class="p">)</span> <span class="k">continue</span><span class="p">;</span>
+  <span class="k">if</span> <span class="p">(</span><span class="n">is_fused_with_prev</span><span class="p">[</span><span class="n">op</span><span class="p">])</span> <span class="p">{</span>
+    <span class="c1">// Same depth as predecessor</span>
+    <span class="n">OpChainingMeta</span> <span class="n">prev_meta</span> <span class="o">=</span> <span class="n">op2chaining_meta</span><span class="p">.</span><span class="n">at</span><span class="p">(</span><span class="n">prev_op</span><span class="p">);</span>
+    <span class="n">op2chaining_meta</span><span class="p">[</span><span class="n">op</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="n">prev_meta</span><span class="p">.</span><span class="n">level</span><span class="p">,</span> <span class="n">prev_meta</span><span class="p">.</span><span class="n">fuse_chain_idx</span><span class="p">,</span>
+                            <span class="n">prev_meta</span><span class="p">.</span><span class="n">pos_in_fuse_chain</span> <span class="o">+</span> <span class="mi">1</span><span class="p">};</span>
+  <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+    <span class="c1">// max(input depths) + 1</span>
+    <span class="kt">int</span> <span class="n">res</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+    <span class="k">for</span> <span class="p">(</span><span class="n">tb</span><span class="o">::</span><span class="n">STensor</span> <span class="k">const</span> <span class="o">&amp;</span><span class="n">input</span> <span class="o">:</span> <span class="n">op</span><span class="o">-&gt;</span><span class="n">input_tensors</span><span class="p">)</span> <span class="p">{</span>
+      <span class="n">res</span> <span class="o">=</span> <span class="n">std</span><span class="o">::</span><span class="n">max</span><span class="p">(</span><span class="n">res</span><span class="p">,</span> <span class="n">op2chaining_meta</span><span class="p">.</span><span class="n">at</span><span class="p">(</span><span class="n">input</span><span class="p">.</span><span class="n">owner_op</span><span class="p">).</span><span class="n">level</span><span class="p">);</span>
+    <span class="p">}</span>
+    <span class="n">op2chaining_meta</span><span class="p">[</span><span class="n">op</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="n">res</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="n">next_chain_idx</span><span class="o">++</span><span class="p">,</span> <span class="mi">0</span><span class="p">};</span>
+  <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div></div> <h3 id="43-schedule-structure">4.3 Schedule Structure</h3> <p>The schedule has three phases:</p> <div class="language-cpp highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">struct</span> <span class="nc">TBSched</span> <span class="p">{</span>
+  <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">TBSchedNode</span><span class="o">&gt;</span> <span class="n">pre_loop_nodes</span><span class="p">;</span>   <span class="c1">// Before the forloop</span>
+  <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">TBSchedNode</span><span class="o">&gt;</span> <span class="n">loop_nodes</span><span class="p">;</span>       <span class="c1">// Inside the forloop</span>
+  <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">TBSchedNode</span><span class="o">&gt;</span> <span class="n">post_loop_nodes</span><span class="p">;</span>  <span class="c1">// After the forloop</span>
+<span class="p">};</span>
+</code></pre></div></div> <p><strong>Synchronization Rule:</strong> A <code class="language-plaintext highlighter-rouge">__syncthreads()</code> is inserted when the depth changes.</p> <h3 id="44-metadata-refinement">4.4 Metadata Refinement</h3> <p>The scheduler also decides per-operator metadata:</p> <div class="language-cpp highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">struct</span> <span class="nc">TBSchedOpMeta</span> <span class="p">{</span>
+  <span class="kt">bool</span> <span class="n">is_chunked_input</span><span class="p">;</span>    <span class="c1">// Use 128-bit wide copies?</span>
+  <span class="kt">bool</span> <span class="n">is_pipelined_input</span><span class="p">;</span>  <span class="c1">// Use async cp.async?</span>
+  <span class="kt">bool</span> <span class="n">is_chunked_output</span><span class="p">;</span>   <span class="c1">// Use 128-bit wide writes?</span>
+  <span class="kt">bool</span> <span class="n">is_accum_in_reg</span><span class="p">;</span>     <span class="c1">// Keep accumulator in registers?</span>
+  <span class="c1">// ...</span>
+<span class="p">};</span>
+</code></pre></div></div> <p><strong>Register Accumulator Heuristic</strong> (<code class="language-plaintext highlighter-rouge">src/transpiler/sched_tb_graph.cc:236-253</code>):</p> <div class="language-cpp highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">// Allow accumulators to take up to 192 registers per thread</span>
+<span class="c1">// (Each thread has 255 32-bit registers max)</span>
+<span class="k">if</span> <span class="p">(</span><span class="n">per_thread_accum_numel_tot</span> <span class="o">+</span> <span class="n">per_thr_accum_numel</span> <span class="o">&lt;=</span> <span class="mi">192</span><span class="p">)</span> <span class="p">{</span>
+  <span class="n">op_meta</span><span class="p">.</span><span class="n">is_accum_in_reg</span> <span class="o">=</span> <span class="nb">true</span><span class="p">;</span>
+  <span class="n">per_thread_accum_numel_tot</span> <span class="o">+=</span> <span class="n">per_thr_accum_numel</span><span class="p">;</span>
+<span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+  <span class="n">op_meta</span><span class="p">.</span><span class="n">is_accum_in_reg</span> <span class="o">=</span> <span class="nb">false</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div></div> <h2 id="5-swizzle-planning">5. Swizzle Planning</h2> <p>Swizzling reorders shared memory layout to avoid <strong>bank conflicts</strong>.</p> <h3 id="51-the-problem">5.1 The Problem</h3> <p>Shared memory has 32 banks. When threads in a warp access the same bank, accesses are serialized. The <code class="language-plaintext highlighter-rouge">ldmatrix</code> instruction loads 16x16 tiles - without swizzling, threads may conflict.</p> <h3 id="52-xor-based-swizzling">5.2 XOR-Based Swizzling</h3> <p>Used when the innermost dimension size is a power of 2:</p> <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>new_addr = old_addr XOR row
+</code></pre></div></div> <p><strong>Example (8x8 tensor, 8 banks):</strong></p> <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Original:              Swizzled:
+Bank: 0 1 2 3 4 5 6 7  Bank: 0 1 2 3 4 5 6 7
+Row 0: 0 1 2 3 4 5 6 7  Row 0: 0 1 2 3 4 5 6 7
+Row 1: 0 1 2 3 4 5 6 7  Row 1: 1 0 3 2 5 4 7 6  (XOR with 1)
+Row 2: 0 1 2 3 4 5 6 7  Row 2: 2 3 0 1 6 7 4 5  (XOR with 2)
+...
+</code></pre></div></div> <p><strong>Parameters:</strong> CuTe’s <code class="language-plaintext highlighter-rouge">Swizzle&lt;B, M, S&gt;</code> with:</p> <ul> <li>B = log2(num_chunks_in_128B)</li> <li>M = log2(chunk_size_in_elements)</li> <li>S = log2(num_chunks_in_inner_dim)</li> </ul> <h3 id="53-shift-based-swizzling">5.3 Shift-Based Swizzling</h3> <p>Used when innermost dimension is not a power of 2:</p> <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>new_addr = old_addr + row * shift
+</code></pre></div></div> <p>The shift is chosen so that <code class="language-plaintext highlighter-rouge">gcd(new_stride, num_banks) == 1</code>.</p> <p><strong>Code Reference</strong> (<code class="language-plaintext highlighter-rouge">src/transpiler/plan_tb_swizzle.cc:141-172</code>):</p> <div class="language-cpp highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">if</span> <span class="p">(</span><span class="n">is_power_of_2</span><span class="p">(</span><span class="n">num_chunks_in_inner_dim</span><span class="p">))</span> <span class="p">{</span>
+  <span class="c1">// XOR-based swizzling</span>
+  <span class="n">meta</span><span class="p">.</span><span class="n">is_xor_swizzled</span> <span class="o">=</span> <span class="nb">true</span><span class="p">;</span>
+  <span class="n">meta</span><span class="p">.</span><span class="n">xor_swizzle_b</span> <span class="o">=</span> <span class="n">log2</span><span class="p">(</span><span class="n">num_chunks_in_128B</span><span class="p">);</span>
+  <span class="n">meta</span><span class="p">.</span><span class="n">xor_swizzle_m</span> <span class="o">=</span> <span class="n">log2</span><span class="p">(</span><span class="n">chunk_size_num_elems</span><span class="p">);</span>
+  <span class="n">meta</span><span class="p">.</span><span class="n">xor_swizzle_s</span> <span class="o">=</span> <span class="n">log2</span><span class="p">(</span><span class="n">num_chunks_in_inner_dim</span><span class="p">);</span>
+<span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+  <span class="c1">// Shift-based swizzling</span>
+  <span class="kt">int</span> <span class="n">new_num_chunks</span> <span class="o">=</span> <span class="n">num_chunks_in_inner_dim</span><span class="p">;</span>
+  <span class="k">while</span> <span class="p">(</span><span class="n">gcd</span><span class="p">(</span><span class="n">new_num_chunks</span><span class="p">,</span> <span class="n">num_chunks_in_128B</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">1</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">new_num_chunks</span><span class="o">++</span><span class="p">;</span>
+  <span class="p">}</span>
+  <span class="c1">// Update strides to reflect padding</span>
+  <span class="n">meta</span><span class="p">.</span><span class="n">strides</span><span class="p">[</span><span class="n">meta</span><span class="p">.</span><span class="n">innermost_dim</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
+  <span class="kt">size_t</span> <span class="n">cur_stride</span> <span class="o">=</span> <span class="n">new_num_chunks</span> <span class="o">*</span> <span class="n">chunk_size_num_elems</span><span class="p">;</span>
+  <span class="c1">// ... update other strides</span>
+<span class="p">}</span>
+</code></pre></div></div> <h2 id="6-memory-planning">6. Memory Planning</h2> <h3 id="61-global-memory-dtensors">6.1 Global Memory (DTensors)</h3> <p>DTensor memory is allocated sequentially with 128-byte alignment:</p> <div class="language-cpp highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">class</span> <span class="nc">MemoryPlanner</span> <span class="p">{</span>
+  <span class="kt">size_t</span> <span class="n">cur_addr</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+
+  <span class="kt">size_t</span> <span class="n">allocate</span><span class="p">(</span><span class="kt">size_t</span> <span class="n">size</span><span class="p">)</span> <span class="p">{</span>
+    <span class="kt">size_t</span> <span class="n">addr</span> <span class="o">=</span> <span class="n">cur_addr</span><span class="p">;</span>
+    <span class="n">cur_addr</span> <span class="o">+=</span> <span class="n">size</span><span class="p">;</span>
+    <span class="n">cur_addr</span> <span class="o">=</span> <span class="n">round_to_multiple</span><span class="p">(</span><span class="n">cur_addr</span><span class="p">,</span> <span class="mi">128</span><span class="p">);</span>  <span class="c1">// 128B alignment</span>
+    <span class="k">return</span> <span class="n">addr</span><span class="p">;</span>
+  <span class="p">}</span>
+<span class="p">};</span>
+</code></pre></div></div> <p>Only <strong>intermediate tensors</strong> (not inputs/outputs) are allocated from the buffer.</p> <h3 id="62-shared-memory-stensors">6.2 Shared Memory (STensors)</h3> <p>STensor memory planning is modeled as <strong>Dynamic Storage Allocation (DSA)</strong>:</p> <p><strong>Problem:</strong> Given tensors with (size, alloc_time, free_time), minimize peak memory.</p> <p><strong>Geometric View:</strong> Pack axis-parallel rectangles (height = size, width = lifetime) without overlap.</p> <h3 id="63-tensor-lifecycles">6.3 Tensor Lifecycles</h3> <div class="language-cpp highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">// Pre-loop inputs: allocated at pre_loop time, freed at 2T or post_loop usage</span>
+<span class="c1">// Loop intermediates: allocated/freed within each iteration</span>
+<span class="c1">// Accumulators: allocated before loop, freed after post_loop usage</span>
+<span class="c1">// Post-loop intermediates: allocated/freed within post_loop phase</span>
+</code></pre></div></div> <p>Timeline encoding:</p> <ul> <li>Pre-loop: time 0 to T</li> <li>Loop: time T to 2T</li> <li>Post-loop: time 2T to 3T</li> </ul> <h3 id="64-allocation-algorithms">6.4 Allocation Algorithms</h3> <p>Three heuristics are tried; the best result is used:</p> <div class="language-cpp highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">vector</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">shared_ptr</span><span class="o">&lt;</span><span class="n">AbstractMemoryPlanner</span><span class="o">&gt;&gt;</span> <span class="n">planners</span> <span class="o">=</span> <span class="p">{</span>
+  <span class="n">std</span><span class="o">::</span><span class="n">make_shared</span><span class="o">&lt;</span><span class="n">FirstFitMemoryPlanner</span><span class="o">&gt;</span><span class="p">(),</span>
+  <span class="n">std</span><span class="o">::</span><span class="n">make_shared</span><span class="o">&lt;</span><span class="n">BestFitMemoryPlanner</span><span class="o">&gt;</span><span class="p">(),</span>
+  <span class="n">std</span><span class="o">::</span><span class="n">make_shared</span><span class="o">&lt;</span><span class="n">WorseFitMemoryPlanner</span><span class="o">&gt;</span><span class="p">()</span>
+<span class="p">};</span>
+</code></pre></div></div> <p><strong>First-Fit:</strong> Choose the first free block that fits <strong>Best-Fit:</strong> Choose the smallest free block that fits <strong>Worse-Fit:</strong> Choose the largest free block that fits</p> <p><strong>Code Reference</strong> (<code class="language-plaintext highlighter-rouge">src/transpiler/plan_stensor_memory.cc:184-213</code>):</p> <div class="language-cpp highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">class</span> <span class="nc">FirstFitMemoryPlanner</span> <span class="o">:</span> <span class="k">public</span> <span class="n">OnlineAllocMemoryPlannerBase</span> <span class="p">{</span>
+  <span class="n">Range</span> <span class="n">select_range</span><span class="p">(</span><span class="kt">size_t</span> <span class="n">size</span><span class="p">)</span> <span class="k">override</span> <span class="p">{</span>
+    <span class="k">auto</span> <span class="n">it</span> <span class="o">=</span> <span class="n">std</span><span class="o">::</span><span class="n">find_if</span><span class="p">(</span><span class="n">free_ranges</span><span class="p">.</span><span class="n">begin</span><span class="p">(),</span> <span class="n">free_ranges</span><span class="p">.</span><span class="n">end</span><span class="p">(),</span>
+      <span class="p">[</span><span class="o">&amp;</span><span class="p">](</span><span class="n">Range</span> <span class="k">const</span> <span class="o">&amp;</span><span class="n">range</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">return</span> <span class="n">range</span><span class="p">.</span><span class="n">second</span> <span class="o">-</span> <span class="n">range</span><span class="p">.</span><span class="n">first</span> <span class="o">&gt;=</span> <span class="n">size</span><span class="p">;</span>
+      <span class="p">});</span>
+    <span class="k">return</span> <span class="p">{</span><span class="n">it</span><span class="o">-&gt;</span><span class="n">first</span><span class="p">,</span> <span class="n">it</span><span class="o">-&gt;</span><span class="n">first</span> <span class="o">+</span> <span class="n">size</span><span class="p">};</span>
+  <span class="p">}</span>
+<span class="p">};</span>
+</code></pre></div></div> <h2 id="7-code-generation">7. Code Generation</h2> <h3 id="71-kernel-level-code">7.1 Kernel-Level Code</h3> <p>For each kernel-level operator, the transpiler generates appropriate code:</p> <p><strong>Matmul:</strong> Calls cuBLAS via the runtime</p> <div class="language-cpp highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">exec</span><span class="p">.</span><span class="n">e</span><span class="p">(</span><span class="s">"kn::gemm&lt;$&gt;($,$,$, $,$,$, ...);"</span><span class="p">,</span>
+       <span class="n">compute_type</span><span class="p">,</span> <span class="n">out0_ptr</span><span class="p">,</span> <span class="n">in0_ptr</span><span class="p">,</span> <span class="n">in1_ptr</span><span class="p">,</span> <span class="n">m</span><span class="p">,</span> <span class="n">n</span><span class="p">,</span> <span class="n">k</span><span class="p">,</span> <span class="p">...);</span>
+</code></pre></div></div> <p><strong>Elementwise:</strong> Uses CuTe layouts</p> <div class="language-cpp highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">exec</span><span class="p">.</span><span class="n">e</span><span class="p">(</span><span class="s">"using kernel = kn::ElementUnaryKernel&lt;$, "</span>
+       <span class="s">"kn::ElementUnaryOpType::$, $, $&gt;;"</span><span class="p">,</span>
+       <span class="n">datatype</span><span class="p">,</span> <span class="n">op_type</span><span class="p">,</span> <span class="n">in_layout</span><span class="p">,</span> <span class="n">out_layout</span><span class="p">);</span>
+<span class="n">exec</span><span class="p">.</span><span class="n">e</span><span class="p">(</span><span class="s">"kernel::run($, $);"</span><span class="p">,</span> <span class="n">out_ptr</span><span class="p">,</span> <span class="n">in_ptr</span><span class="p">);</span>
+</code></pre></div></div> <p><strong>Custom Op:</strong> Generates a complete CUDA kernel</p> <h3 id="72-custom-kernel-structure">7.2 Custom Kernel Structure</h3> <p>For <code class="language-plaintext highlighter-rouge">KN_CUSTOMIZED_OP</code>, a complete kernel is generated:</p> <div class="language-cpp highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">__global__</span> <span class="kt">void</span> <span class="nf">custom_kernel_0</span><span class="p">(</span><span class="n">half</span><span class="o">*</span> <span class="n">output</span><span class="p">,</span> <span class="n">half</span> <span class="k">const</span><span class="o">*</span> <span class="n">input</span><span class="p">)</span> <span class="p">{</span>
+  <span class="kt">int</span> <span class="n">thread_idx</span> <span class="o">=</span> <span class="n">threadIdx</span><span class="p">.</span><span class="n">x</span><span class="p">;</span>
+  <span class="k">extern</span> <span class="n">__shared__</span> <span class="kt">char</span> <span class="n">buf</span><span class="p">[];</span>
+
+  <span class="c1">// Define STensor pointers</span>
+  <span class="n">half</span> <span class="o">*</span><span class="n">stensor0_ptr</span> <span class="o">=</span> <span class="p">(</span><span class="n">half</span><span class="o">*</span><span class="p">)(</span><span class="n">buf</span> <span class="o">+</span> <span class="mi">0</span><span class="p">);</span>
+  <span class="n">half</span> <span class="o">*</span><span class="n">stensor1_ptr</span> <span class="o">=</span> <span class="p">(</span><span class="n">half</span><span class="o">*</span><span class="p">)(</span><span class="n">buf</span> <span class="o">+</span> <span class="mi">1024</span><span class="p">);</span>
+
+  <span class="c1">// Pre-loop: Load static inputs</span>
+  <span class="n">STensor0InputAtom</span><span class="o">::</span><span class="n">run</span><span class="p">(</span><span class="n">stensor0_ptr</span><span class="p">,</span> <span class="n">dtensor_tile_ptr</span><span class="p">,</span> <span class="n">thread_idx</span><span class="p">);</span>
+  <span class="n">__syncthreads</span><span class="p">();</span>
+
+  <span class="c1">// Main loop</span>
+  <span class="k">for</span> <span class="p">(</span><span class="kt">int</span> <span class="n">for_idx</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">for_idx</span> <span class="o">&lt;</span> <span class="n">FORLOOP_RANGE</span><span class="p">;</span> <span class="n">for_idx</span><span class="o">++</span><span class="p">)</span> <span class="p">{</span>
+    <span class="c1">// Load inputs for this iteration</span>
+    <span class="n">STensor1InputAtom</span><span class="o">::</span><span class="n">run</span><span class="p">(</span><span class="n">stensor1_ptr</span><span class="p">,</span> <span class="n">dtensor_tile_ptr</span> <span class="o">+</span> <span class="n">offset</span><span class="o">*</span><span class="n">for_idx</span><span class="p">,</span> <span class="n">thread_idx</span><span class="p">);</span>
+    <span class="n">__syncthreads</span><span class="p">();</span>
+
+    <span class="c1">// Compute</span>
+    <span class="n">Matmul0Kernel</span><span class="o">::</span><span class="n">run</span><span class="p">(</span><span class="n">matmul_accum</span><span class="p">,</span> <span class="n">stensor0_ptr</span><span class="p">,</span> <span class="n">stensor1_ptr</span><span class="p">,</span> <span class="n">thread_idx</span><span class="p">);</span>
+    <span class="c1">// ... more operators</span>
+  <span class="p">}</span>
+  <span class="n">__syncthreads</span><span class="p">();</span>
+
+  <span class="c1">// Post-loop: reductions, outputs</span>
+  <span class="n">OutputAtom</span><span class="o">::</span><span class="n">run</span><span class="p">(</span><span class="n">dtensor_output</span><span class="p">,</span> <span class="n">stensor_result</span><span class="p">,</span> <span class="n">thread_idx</span><span class="p">);</span>
+<span class="p">}</span>
+</code></pre></div></div> <h3 id="73-epilogue-fusion">7.3 Epilogue Fusion</h3> <p>Fused operators are implemented as <strong>epilogues</strong>:</p> <div class="language-cpp highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">string</span> <span class="nf">transpile_fusion_epilogue</span><span class="p">(</span><span class="n">chain</span><span class="p">,</span> <span class="n">dtype</span><span class="p">)</span> <span class="p">{</span>
+  <span class="n">string</span> <span class="n">res</span> <span class="o">=</span> <span class="s">"tb::EpilogueStore&lt;half&gt;"</span><span class="p">;</span>
+  <span class="k">for</span> <span class="p">(</span><span class="n">op</span> <span class="n">in</span> <span class="n">chain</span><span class="p">[</span><span class="mi">1</span><span class="o">:</span><span class="p">])</span> <span class="p">{</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">op</span><span class="o">-&gt;</span><span class="n">op_type</span> <span class="o">==</span> <span class="n">TB_EXP_OP</span><span class="p">)</span>
+      <span class="n">res</span> <span class="o">=</span> <span class="n">fmt</span><span class="p">(</span><span class="s">"tb::EpilogueExp&lt;half, $&gt;"</span><span class="p">,</span> <span class="n">res</span><span class="p">);</span>
+    <span class="k">else</span> <span class="k">if</span> <span class="p">(</span><span class="n">op</span><span class="o">-&gt;</span><span class="n">op_type</span> <span class="o">==</span> <span class="n">TB_FORLOOP_ACCUM_NO_RED_OP</span><span class="p">)</span>
+      <span class="n">res</span> <span class="o">=</span> <span class="s">"tb::EpilogueStoreAccum&lt;half&gt;"</span><span class="p">;</span>
+    <span class="c1">// ...</span>
+  <span class="p">}</span>
+  <span class="k">return</span> <span class="n">res</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div></div> <p><strong>Example chain <code class="language-plaintext highlighter-rouge">Matmul → Exp → Store</code>:</strong></p> <div class="language-cpp highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">using</span> <span class="n">Epilogue</span> <span class="o">=</span> <span class="n">tb</span><span class="o">::</span><span class="n">EpilogueExp</span><span class="o">&lt;</span><span class="n">half</span><span class="p">,</span> <span class="n">tb</span><span class="o">::</span><span class="n">EpilogueStore</span><span class="o">&lt;</span><span class="n">half</span><span class="o">&gt;&gt;</span><span class="p">;</span>
+</code></pre></div></div> <h3 id="74-architecture-specific-code">7.4 Architecture-Specific Code</h3> <p><strong>Hopper (SM90):</strong></p> <ul> <li>TMA (Tensor Memory Accelerator) for async copies</li> <li>Warp group specialization</li> <li><code class="language-plaintext highlighter-rouge">SM90_TMA_LOAD</code> copy atoms</li> </ul> <p><strong>Blackwell (SM100):</strong></p> <ul> <li>2-SM MMA instructions</li> <li>Cluster-level synchronization</li> <li>TMEM allocation</li> </ul> <h2 id="8-running-example-rmsnorm--linear">8. Running Example: RMSNorm + Linear</h2> <p>Let’s trace through transpiling our running example:</p> <h3 id="81-input-graph">8.1 Input Graph</h3> <div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># From c1_architecture
+</span><span class="n">X</span> <span class="o">=</span> <span class="n">graph</span><span class="p">.</span><span class="nf">new_input</span><span class="p">([</span><span class="n">batch</span><span class="p">,</span> <span class="n">seq</span><span class="p">,</span> <span class="n">hidden</span><span class="p">])</span>
+<span class="n">W_norm</span> <span class="o">=</span> <span class="n">graph</span><span class="p">.</span><span class="nf">new_input</span><span class="p">([</span><span class="n">hidden</span><span class="p">])</span>
+<span class="n">W_linear</span> <span class="o">=</span> <span class="n">graph</span><span class="p">.</span><span class="nf">new_input</span><span class="p">([</span><span class="n">hidden</span><span class="p">,</span> <span class="n">output</span><span class="p">])</span>
+
+<span class="c1"># Custom op with threadblock graph:
+# 1. Load X tile
+# 2. Square X
+# 3. Reduce sum
+# 4. Sqrt (get RMS)
+# 5. Divide X by RMS
+# 6. Matmul with W_linear
+# 7. Store result
+</span></code></pre></div></div> <h3 id="82-fusion-analysis">8.2 Fusion Analysis</h3> <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>TB_INPUT (X) → TB_SQUARE → TB_REDUCTION → TB_SQRT → TB_DIV → TB_MATMUL → TB_OUTPUT
+     ↑              ↑
+Not fusable    Can fuse with TB_INPUT? No (TB_INPUT has forloop_dim)
+</code></pre></div></div> <p>Result: Minimal fusion (individual operators)</p> <h3 id="83-layout-resolution">8.3 Layout Resolution</h3> <p>Z3 constraints:</p> <ul> <li>Input X: innermost_dim from user (e.g., last dim)</li> <li>All matmul operands: innermost in last two dims</li> <li>STensors: prefer same innermost as DTensors for wide copy</li> </ul> <h3 id="84-scheduling">8.4 Scheduling</h3> <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>pre_loop_nodes: [TB_INPUT(W_norm)]  # Static weight
+loop_nodes: [TB_INPUT(X), TB_SQUARE, TB_REDUCTION, TB_SQRT,
+             TB_DIV, TB_MATMUL, TB_FORLOOP_ACCUM]
+post_loop_nodes: [TB_OUTPUT]
+</code></pre></div></div> <p>Synchronizations inserted between depth changes.</p> <h3 id="85-generated-code-simplified">8.5 Generated Code (Simplified)</h3> <div class="language-cpp highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">__global__</span> <span class="kt">void</span> <span class="nf">custom_kernel_rmsnorm_linear</span><span class="p">(...)</span> <span class="p">{</span>
+  <span class="k">extern</span> <span class="n">__shared__</span> <span class="kt">char</span> <span class="n">buf</span><span class="p">[];</span>
+
+  <span class="c1">// Load weight (pre-loop)</span>
+  <span class="n">WNormInputAtom</span><span class="o">::</span><span class="n">run</span><span class="p">(</span><span class="n">wnorm_ptr</span><span class="p">,</span> <span class="n">wnorm_tile</span><span class="p">,</span> <span class="n">thread_idx</span><span class="p">);</span>
+  <span class="n">__syncthreads</span><span class="p">();</span>
+
+  <span class="k">for</span> <span class="p">(</span><span class="kt">int</span> <span class="n">for_idx</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">for_idx</span> <span class="o">&lt;</span> <span class="n">K_TILES</span><span class="p">;</span> <span class="n">for_idx</span><span class="o">++</span><span class="p">)</span> <span class="p">{</span>
+    <span class="c1">// Load X tile</span>
+    <span class="n">XInputAtom</span><span class="o">::</span><span class="n">run</span><span class="p">(</span><span class="n">x_ptr</span><span class="p">,</span> <span class="n">x_tile</span> <span class="o">+</span> <span class="n">for_idx</span> <span class="o">*</span> <span class="n">TILE_K</span><span class="p">,</span> <span class="n">thread_idx</span><span class="p">);</span>
+    <span class="n">__syncthreads</span><span class="p">();</span>
+
+    <span class="c1">// RMSNorm computation</span>
+    <span class="n">SquareKernel</span><span class="o">::</span><span class="n">run</span><span class="p">(</span><span class="n">sq_ptr</span><span class="p">,</span> <span class="n">x_ptr</span><span class="p">,</span> <span class="n">thread_idx</span><span class="p">);</span>
+    <span class="n">__syncthreads</span><span class="p">();</span>
+    <span class="n">ReductionKernel</span><span class="o">::</span><span class="n">run</span><span class="p">(</span><span class="n">sum_ptr</span><span class="p">,</span> <span class="n">sq_ptr</span><span class="p">,</span> <span class="n">thread_idx</span><span class="p">);</span>
+    <span class="n">__syncthreads</span><span class="p">();</span>
+    <span class="n">SqrtKernel</span><span class="o">::</span><span class="n">run</span><span class="p">(</span><span class="n">rms_ptr</span><span class="p">,</span> <span class="n">sum_ptr</span><span class="p">,</span> <span class="n">thread_idx</span><span class="p">);</span>
+    <span class="n">DivKernel</span><span class="o">::</span><span class="n">run</span><span class="p">(</span><span class="n">norm_ptr</span><span class="p">,</span> <span class="n">x_ptr</span><span class="p">,</span> <span class="n">rms_ptr</span><span class="p">,</span> <span class="n">thread_idx</span><span class="p">);</span>
+    <span class="n">__syncthreads</span><span class="p">();</span>
+
+    <span class="c1">// Matmul with accumulation</span>
+    <span class="n">MatmulKernel</span><span class="o">::</span><span class="n">run</span><span class="p">(</span><span class="n">accum</span><span class="p">,</span> <span class="n">norm_ptr</span><span class="p">,</span> <span class="n">wlinear_ptr</span><span class="p">,</span> <span class="n">thread_idx</span><span class="p">);</span>
+  <span class="p">}</span>
+  <span class="n">__syncthreads</span><span class="p">();</span>
+
+  <span class="c1">// Output</span>
+  <span class="n">OutputAtom</span><span class="o">::</span><span class="n">run</span><span class="p">(</span><span class="n">output_tile</span><span class="p">,</span> <span class="n">accum</span><span class="p">,</span> <span class="n">thread_idx</span><span class="p">);</span>
+<span class="p">}</span>
+</code></pre></div></div> <h2 id="9-python-examples">9. Python Examples</h2> <p>To see the transpiler in action, run the example scripts:</p> <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Inspect layout resolution</span>
+python3 tutorial/c2_transpiler_cuda/layout_resolution_example.py
+
+<span class="c"># Visualize scheduling</span>
+python3 tutorial/c2_transpiler_cuda/scheduling_example.py
+
+<span class="c"># See generated code</span>
+python3 tutorial/c2_transpiler_cuda/codegen_example.py
+</code></pre></div></div> <h2 id="10-mirage-persistent-kernel-mpk-runtime">10. Mirage Persistent Kernel (MPK) Runtime</h2> <p>The generated CUDA code from the transpiler runs within Mirage’s <strong>Persistent Kernel Runtime</strong>. This section explains the runtime architecture that enables high-performance LLM inference through mega-kernel execution.</p> <h3 id="101-traditional-kernels-vs-mega-kernels">10.1 Traditional Kernels vs. Mega-Kernels</h3> <p><strong>Traditional Approach:</strong> In conventional CUDA programming, each operation launches a separate kernel:</p> <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Launch Kernel 1 (RMSNorm) → Sync → Launch Kernel 2 (Attention) → Sync → Launch Kernel 3 (FFN) → ...
+</code></pre></div></div> <p><strong>Problems:</strong></p> <ul> <li>Each kernel launch incurs 5-10μs overhead</li> <li>GPU becomes idle during kernel launch gaps</li> <li>Limited inter-layer optimization opportunities</li> </ul> <p><strong>Mega-Kernel Approach (MPK):</strong> Mirage fuses the entire LLM inference into a single, persistent kernel:</p> <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Launch Mega-Kernel (contains all layers) → Runs until inference complete
+</code></pre></div></div> <p><strong>Benefits:</strong></p> <ul> <li>Eliminates kernel launch overhead</li> <li>Enables inter-layer pipelining</li> <li>Allows computation/communication overlap</li> </ul> <h3 id="102-task-graph-architecture">10.2 Task Graph Architecture</h3> <p>Instead of CUDA graphs (which work at kernel granularity), MPK uses a <strong>Task Graph</strong> at sub-kernel granularity:</p> <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>┌─────────────────────────────────────────────────────────────┐
+│                      Task Graph                              │
+│  ┌──────┐    ┌──────┐    ┌──────┐    ┌──────┐              │
+│  │Task 0│───▶│Task 1│───▶│Task 2│───▶│Task 3│───▶ ...      │
+│  │RMSNorm│    │QKV   │    │Attn  │    │FFN   │              │
+│  │Layer0│    │Proj  │    │Score │    │Gate  │              │
+│  └──────┘    └──────┘    └──────┘    └──────┘              │
+│                                                              │
+│  Dependencies encoded as events between tasks                │
+└─────────────────────────────────────────────────────────────┘
+</code></pre></div></div> <p><strong>Task Definition:</strong> Each task represents a fused operation (from the transpiler’s custom kernels):</p> <div class="language-cpp highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">struct</span> <span class="nc">Task</span> <span class="p">{</span>
+    <span class="kt">int</span> <span class="n">task_id</span><span class="p">;</span>
+    <span class="kt">void</span><span class="o">*</span> <span class="n">kernel_func</span><span class="p">;</span>        <span class="c1">// Pointer to device function</span>
+    <span class="kt">void</span><span class="o">**</span> <span class="n">kernel_args</span><span class="p">;</span>       <span class="c1">// Arguments (tensor pointers)</span>
+    <span class="n">dim3</span> <span class="n">grid_dim</span><span class="p">;</span>            <span class="c1">// Number of thread blocks</span>
+    <span class="n">dim3</span> <span class="n">block_dim</span><span class="p">;</span>           <span class="c1">// Threads per block</span>
+    <span class="kt">int</span> <span class="n">shared_mem_size</span><span class="p">;</span>      <span class="c1">// Shared memory requirement</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;</span> <span class="n">deps</span><span class="p">;</span>    <span class="c1">// Dependency task IDs</span>
+<span class="p">};</span>
+</code></pre></div></div> <h3 id="103-mpk-runtime-architecture">10.3 MPK Runtime Architecture</h3> <p>The runtime implements a <strong>task-based parallel execution model</strong>:</p> <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>┌─────────────────────────────────────────────────────────────────┐
+│                     Mega-Kernel (Persistent)                     │
+│  ┌─────────────────────────────────────────────────────────┐    │
+│  │                    Schedulers                            │    │
+│  │  ┌──────────┐  ┌──────────┐  ┌──────────┐              │    │
+│  │  │Scheduler │  │Scheduler │  │Scheduler │    ...       │    │
+│  │  │  Warp 0  │  │  Warp 1  │  │  Warp 2  │              │    │
+│  │  └────┬─────┘  └────┬─────┘  └────┬─────┘              │    │
+│  │       │              │              │                    │    │
+│  │       ▼              ▼              ▼                    │    │
+│  │  ┌─────────────────────────────────────────────────┐   │    │
+│  │  │              Task Queue (Global Memory)          │   │    │
+│  │  │  [Task 0] [Task 1] [Task 2] [Task 3] ...        │   │    │
+│  │  └─────────────────────────────────────────────────┘   │    │
+│  │       │              │              │                    │    │
+│  │       ▼              ▼              ▼                    │    │
+│  │  ┌──────────┐  ┌──────────┐  ┌──────────┐              │    │
+│  │  │ Worker 0 │  │ Worker 1 │  │ Worker 2 │    ...       │    │
+│  │  │  (SM 0)  │  │  (SM 1)  │  │  (SM 2)  │              │    │
+│  │  └──────────┘  └──────────┘  └──────────┘              │    │
+│  └─────────────────────────────────────────────────────────┘    │
+│                                                                  │
+│  Event Queue: Tracks task completion and triggers dependents     │
+└─────────────────────────────────────────────────────────────────┘
+</code></pre></div></div> <p><strong>Key Components:</strong></p> <ol> <li> <p><strong>Workers (SMs):</strong> Execute tasks. Each SM acts as a worker that picks tasks from the queue.</p> </li> <li> <p><strong>Schedulers (Warps):</strong> Dedicated warps that manage task distribution and dependency resolution.</p> </li> <li> <p><strong>Task Queue:</strong> Global memory structure holding ready-to-execute tasks.</p> </li> <li> <p><strong>Event Queue:</strong> Tracks task completion events and triggers dependent tasks.</p> </li> </ol> <h3 id="104-event-driven-execution-model">10.4 Event-Driven Execution Model</h3> <p>The runtime uses an <strong>event-driven model</strong> for task synchronization:</p> <div class="language-cpp highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">// Simplified event-driven execution loop</span>
+<span class="n">__device__</span> <span class="kt">void</span> <span class="nf">worker_loop</span><span class="p">()</span> <span class="p">{</span>
+    <span class="k">while</span> <span class="p">(</span><span class="o">!</span><span class="n">done</span><span class="p">)</span> <span class="p">{</span>
+        <span class="c1">// 1. Dequeue a ready task</span>
+        <span class="n">Task</span><span class="o">*</span> <span class="n">task</span> <span class="o">=</span> <span class="n">task_queue</span><span class="p">.</span><span class="n">dequeue</span><span class="p">();</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">task</span> <span class="o">==</span> <span class="nb">nullptr</span><span class="p">)</span> <span class="p">{</span>
+            <span class="c1">// Spin or yield</span>
+            <span class="k">continue</span><span class="p">;</span>
+        <span class="p">}</span>
+
+        <span class="c1">// 2. Execute the task</span>
+        <span class="n">execute_task</span><span class="p">(</span><span class="n">task</span><span class="p">);</span>
+
+        <span class="c1">// 3. Signal completion (post event)</span>
+        <span class="n">event_queue</span><span class="p">.</span><span class="n">post</span><span class="p">(</span><span class="n">task</span><span class="o">-&gt;</span><span class="n">task_id</span><span class="p">);</span>
+
+        <span class="c1">// 4. Check if dependent tasks are now ready</span>
+        <span class="k">for</span> <span class="p">(</span><span class="kt">int</span> <span class="n">dep_id</span> <span class="o">:</span> <span class="n">task</span><span class="o">-&gt;</span><span class="n">dependents</span><span class="p">)</span> <span class="p">{</span>
+            <span class="k">if</span> <span class="p">(</span><span class="n">all_deps_satisfied</span><span class="p">(</span><span class="n">dep_id</span><span class="p">))</span> <span class="p">{</span>
+                <span class="n">task_queue</span><span class="p">.</span><span class="n">enqueue</span><span class="p">(</span><span class="n">get_task</span><span class="p">(</span><span class="n">dep_id</span><span class="p">));</span>
+            <span class="p">}</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div></div> <p><strong>Event Types:</strong></p> <ul> <li><strong>Task Completion:</strong> Signals that a task has finished</li> <li><strong>Memory Ready:</strong> Signals that a tensor buffer is available</li> <li><strong>Communication Complete:</strong> Signals that inter-GPU data transfer is done</li> </ul> <h3 id="105-inter-layer-pipelining">10.5 Inter-Layer Pipelining</h3> <p>The mega-kernel enables <strong>inter-layer pipelining</strong> - overlapping execution of different layers:</p> <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Time →
+┌─────────────────────────────────────────────────────────────────┐
+│ Token 0: │ RMSNorm │ Attn │ FFN │                               │
+│ Token 1:      │ RMSNorm │ Attn │ FFN │                          │
+│ Token 2:           │ RMSNorm │ Attn │ FFN │                     │
+│ Token 3:                │ RMSNorm │ Attn │ FFN │                │
+└─────────────────────────────────────────────────────────────────┘
+                   ↑
+            Pipeline Parallelism at Sub-Layer Granularity
+</code></pre></div></div> <p><strong>Without pipelining (traditional):</strong></p> <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Token 0: [====RMSNorm====][====Attn====][====FFN====]
+Token 1:                                             [====RMSNorm====]...
+         ← GPU partially idle during transitions →
+</code></pre></div></div> <p><strong>With pipelining (MPK):</strong></p> <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Token 0: [RMSNorm][Attn][FFN]
+Token 1:    [RMSNorm][Attn][FFN]
+Token 2:       [RMSNorm][Attn][FFN]
+         ← GPU continuously busy →
+</code></pre></div></div> <h3 id="106-computation-and-communication-overlap">10.6 Computation and Communication Overlap</h3> <p>For multi-GPU inference, MPK overlaps computation with inter-GPU communication:</p> <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>GPU 0:  │ Compute │ Comm  │ Compute │ Comm  │
+        │ Layer 0 │ Send  │ Layer 2 │ Send  │
+                     ↓                 ↓
+GPU 1:  │ Comm    │ Compute │ Comm  │ Compute │
+        │ Recv    │ Layer 1 │ Recv  │ Layer 3 │
+</code></pre></div></div> <p>This is implemented using:</p> <ol> <li><strong>Async Copy Tasks:</strong> Specialized tasks that perform NCCL or direct P2P transfers</li> <li><strong>Double Buffering:</strong> Computation on one buffer while loading into another</li> <li><strong>Task Dependencies:</strong> Communication completion triggers dependent compute tasks</li> </ol> <h3 id="107-runtime-code-structure">10.7 Runtime Code Structure</h3> <p>The runtime is organized in <code class="language-plaintext highlighter-rouge">include/mirage/transpiler/runtime/</code>:</p> <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>runtime/
+├── common.h           # Common utilities
+├── element_unary.h    # Unary ops (exp, sqrt, etc.)
+├── element_binary.h   # Binary ops (add, mul, etc.)
+├── reduction.h        # Reduction kernels
+├── matmul.h           # Matmul with CuTe
+├── threadblock.h      # TB-level operators
+└── kernel.h           # KN-level operators
+</code></pre></div></div> <p><strong>Example Runtime Function</strong> (<code class="language-plaintext highlighter-rouge">runtime/matmul.h</code>):</p> <div class="language-cpp highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">namespace</span> <span class="n">tb</span> <span class="p">{</span>
+
+<span class="k">template</span> <span class="o">&lt;</span><span class="k">typename</span> <span class="nc">T</span><span class="p">,</span> <span class="k">typename</span> <span class="nc">MMAAtom</span><span class="p">,</span> <span class="k">typename</span> <span class="nc">TileLayout</span><span class="p">,</span> <span class="p">...&gt;</span>
+<span class="k">struct</span> <span class="nc">Matmul</span> <span class="p">{</span>
+    <span class="k">static</span> <span class="n">__device__</span> <span class="kt">void</span> <span class="n">run</span><span class="p">(</span>
+        <span class="n">AccumType</span><span class="o">&amp;</span> <span class="n">accum</span><span class="p">,</span>      <span class="c1">// Register-file accumulator</span>
+        <span class="n">T</span> <span class="k">const</span><span class="o">*</span> <span class="n">A_smem</span><span class="p">,</span>       <span class="c1">// A in shared memory</span>
+        <span class="n">T</span> <span class="k">const</span><span class="o">*</span> <span class="n">B_smem</span><span class="p">,</span>       <span class="c1">// B in shared memory</span>
+        <span class="kt">char</span><span class="o">*</span> <span class="n">buf</span><span class="p">,</span>             <span class="c1">// Workspace</span>
+        <span class="kt">int</span> <span class="n">thread_idx</span>         <span class="c1">// Thread index</span>
+    <span class="p">)</span> <span class="p">{</span>
+        <span class="c1">// CuTe-based MMA implementation</span>
+        <span class="k">auto</span> <span class="n">thr_mma</span> <span class="o">=</span> <span class="p">...;</span>
+        <span class="n">cute</span><span class="o">::</span><span class="n">gemm</span><span class="p">(</span><span class="n">thr_mma</span><span class="p">,</span> <span class="n">tA</span><span class="p">,</span> <span class="n">tB</span><span class="p">,</span> <span class="n">tC</span><span class="p">);</span>
+    <span class="p">}</span>
+<span class="p">};</span>
+
+<span class="p">}</span> <span class="c1">// namespace tb</span>
+</code></pre></div></div> <h3 id="108-example-persistent-kernel-in-action">10.8 Example: Persistent Kernel in Action</h3> <p>Here’s a simplified view of how the generated code integrates with the runtime:</p> <div class="language-cpp highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">// Generated by transpiler</span>
+<span class="n">__global__</span> <span class="kt">void</span> <span class="nf">mpk_llm_inference</span><span class="p">(</span>
+    <span class="n">MPKRuntimeState</span><span class="o">*</span> <span class="n">state</span><span class="p">,</span>
+    <span class="n">half</span><span class="o">*</span> <span class="n">input_tokens</span><span class="p">,</span>
+    <span class="n">half</span><span class="o">*</span> <span class="n">output_logits</span>
+<span class="p">)</span> <span class="p">{</span>
+    <span class="c1">// Determine role: scheduler or worker</span>
+    <span class="kt">int</span> <span class="n">warp_id</span> <span class="o">=</span> <span class="n">threadIdx</span><span class="p">.</span><span class="n">x</span> <span class="o">/</span> <span class="mi">32</span><span class="p">;</span>
+    <span class="kt">int</span> <span class="n">sm_id</span> <span class="o">=</span> <span class="n">blockIdx</span><span class="p">.</span><span class="n">x</span><span class="p">;</span>
+
+    <span class="k">if</span> <span class="p">(</span><span class="n">warp_id</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
+        <span class="c1">// Scheduler warp</span>
+        <span class="n">scheduler_loop</span><span class="p">(</span><span class="n">state</span><span class="p">);</span>
+    <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+        <span class="c1">// Worker warps</span>
+        <span class="k">while</span> <span class="p">(</span><span class="o">!</span><span class="n">state</span><span class="o">-&gt;</span><span class="n">done</span><span class="p">)</span> <span class="p">{</span>
+            <span class="n">Task</span><span class="o">*</span> <span class="n">task</span> <span class="o">=</span> <span class="n">state</span><span class="o">-&gt;</span><span class="n">task_queue</span><span class="p">.</span><span class="n">dequeue</span><span class="p">(</span><span class="n">sm_id</span><span class="p">);</span>
+            <span class="k">if</span> <span class="p">(</span><span class="n">task</span><span class="p">)</span> <span class="p">{</span>
+                <span class="c1">// Execute the fused kernel generated by transpiler</span>
+                <span class="k">switch</span> <span class="p">(</span><span class="n">task</span><span class="o">-&gt;</span><span class="n">kernel_type</span><span class="p">)</span> <span class="p">{</span>
+                    <span class="k">case</span> <span class="n">RMSNORM_LINEAR</span><span class="p">:</span>
+                        <span class="n">custom_kernel_rmsnorm_linear</span><span class="p">(</span><span class="n">task</span><span class="o">-&gt;</span><span class="n">args</span><span class="p">,</span> <span class="n">threadIdx</span><span class="p">.</span><span class="n">x</span><span class="p">);</span>
+                        <span class="k">break</span><span class="p">;</span>
+                    <span class="k">case</span> <span class="n">ATTENTION</span><span class="p">:</span>
+                        <span class="n">custom_kernel_attention</span><span class="p">(</span><span class="n">task</span><span class="o">-&gt;</span><span class="n">args</span><span class="p">,</span> <span class="n">threadIdx</span><span class="p">.</span><span class="n">x</span><span class="p">);</span>
+                        <span class="k">break</span><span class="p">;</span>
+                    <span class="c1">// ... other kernel types</span>
+                <span class="p">}</span>
+                <span class="n">state</span><span class="o">-&gt;</span><span class="n">event_queue</span><span class="p">.</span><span class="n">post</span><span class="p">(</span><span class="n">task</span><span class="o">-&gt;</span><span class="n">task_id</span><span class="p">);</span>
+            <span class="p">}</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div></div> <h3 id="109-performance-characteristics">10.9 Performance Characteristics</h3> <p>The MPK runtime provides several performance advantages:</p> <table> <thead> <tr> <th>Aspect</th> <th>Traditional Kernels</th> <th>MPK Runtime</th> </tr> </thead> <tbody> <tr> <td>Kernel launch overhead</td> <td>5-10μs per kernel</td> <td>Amortized (single launch)</td> </tr> <tr> <td>Inter-layer pipelining</td> <td>Not possible</td> <td>Enabled</td> </tr> <tr> <td>Compute/Comm overlap</td> <td>Manual</td> <td>Automatic</td> </tr> <tr> <td>GPU utilization</td> <td>Variable (gaps)</td> <td>High (continuous)</td> </tr> <tr> <td>Scheduling</td> <td>Host-side</td> <td>Device-side</td> </tr> </tbody> </table> <p><strong>Typical speedups:</strong> 1.2-2.0x for LLM inference depending on model size and batch configuration.</p> <h2 id="11-python-examples">11. Python Examples</h2> <p>To see the transpiler in action, run the example scripts:</p> <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Memory planning visualization</span>
+python3 tutorial/c2_transpiler_cuda/memory_planning_example.py
+
+<span class="c"># Swizzle planning demonstration</span>
+python3 tutorial/c2_transpiler_cuda/swizzle_planning_example.py
+
+<span class="c"># Scheduling algorithm visualization</span>
+python3 tutorial/c2_transpiler_cuda/scheduling_example.py
+
+<span class="c"># Generated code structure examples</span>
+python3 tutorial/c2_transpiler_cuda/codegen_example.py
+
+<span class="c"># Runtime concepts demonstration</span>
+python3 tutorial/c2_transpiler_cuda/runtime_example.py
+</code></pre></div></div> <h2 id="12-key-takeaways">12. Key Takeaways</h2> <ol> <li><strong>Fusion</strong> reduces memory traffic but is currently limited to unary operators</li> <li><strong>Layout resolution</strong> uses Z3 to balance multiple competing objectives</li> <li><strong>Scheduling</strong> minimizes synchronizations using depth-based topological sort</li> <li><strong>Swizzling</strong> avoids bank conflicts with XOR or shift-based methods</li> <li><strong>Memory planning</strong> uses best-of-three heuristics for shared memory</li> <li><strong>Code generation</strong> leverages CuTe for portable tensor operations</li> <li><strong>MPK Runtime</strong> enables mega-kernel execution with task-based parallelism</li> <li><strong>Event-driven model</strong> provides efficient dependency resolution</li> <li><strong>Inter-layer pipelining</strong> maximizes GPU utilization</li> </ol> <p>The transpiler is the bridge between Mirage’s graph-level optimizations and efficient GPU execution. Understanding these algorithms helps when:</p> <ul> <li>Adding new operators</li> <li>Debugging performance issues</li> <li>Extending support for new architectures</li> <li>Optimizing runtime behavior for specific workloads</li> </ul>]]></content><author><name></name></author><summary type="html"><![CDATA[In this blog, we dive deep into Mirage’s Transpiler, the component responsible for translating optimized MuGraph representations into efficient CUDA code. The transpiler bridges the gap between the high-level graph representation and low-level GPU execution.]]></summary></entry><entry><title type="html">Inside Mirage (1) - Superoptimizing Tensor Programs via MuGraph and Search</title><link href="https://uv-xiao.github.io/blog/2025/mirage-ir-search/" rel="alternate" type="text/html" title="Inside Mirage (1) - Superoptimizing Tensor Programs via MuGraph and Search"/><published>2025-11-24T00:00:00+00:00</published><updated>2025-11-24T00:00:00+00:00</updated><id>https://uv-xiao.github.io/blog/2025/mirage-ir-search</id><content type="html" xml:base="https://uv-xiao.github.io/blog/2025/mirage-ir-search/"><![CDATA[<p>In the world of Large Language Models (LLMs), theoretical FLOPs often take a backseat to heterogenous processing units and memory hierarchies. <strong>Mirage</strong> is a tensor algebra superoptimizer. Instead of relying on static, hand-written fusion rules, Mirage <strong>searches</strong> the space of potential GPU kernels to automatically discover highly optimized, fused implementations that efficiently exploit GPU resources and memory hierarchies.</p> <p>In this post, we will tear down the architecture of Mirage. We will set up a development environment (even without a GPU), explore the <strong>MuGraph</strong> intermediate representation, and dissect the <strong>Search Algorithms</strong> that drive the optimization.</p> <blockquote> <p><strong>Note:</strong> This post follows the hands-on <a href="https://github.com/arch-of-shadow/mirage/tree/uv_tutorial_00">Mirage Tutorial (uv_tutorial_00 branch)</a>.</p> </blockquote> <hr/> <h2 id="chapter-0-environment-setup">Chapter 0: Environment Setup</h2> <p>This chapter only provides the Docker-based installation. The advantage is that it can be run without local GPUs!</p> <p>You can also adopt alternatives for installation, according to <a href="https://github.com/arch-of-shadow/mirage/tree/uv_tutorial_00/INSTALL.md">INSTALL.md</a>.</p> <h3 id="0-prerequisite">0. Prerequisite</h3> <p>Clone the mirage repo recursively.</p> <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>git clone <span class="nt">--recursive</span> https://www.github.com/mirage-project/mirage
 <span class="c"># Or maybe you can want to use my fork for tutorial purpose: </span>
 <span class="c"># git clone --recursive -b uv_tutorial_00 git@github.com:arch-of-shadow/mirage.git</span>
 <span class="nb">cd </span>mirage
