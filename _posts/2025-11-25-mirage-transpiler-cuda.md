@@ -985,28 +985,8 @@ The MPK runtime provides several performance advantages:
 
 **Typical speedups:** 1.2-2.0x for LLM inference depending on model size and batch configuration.
 
-## 11. Python Examples
 
-To see the transpiler in action, run the example scripts:
-
-```bash
-# Memory planning visualization
-python3 tutorial/c2_transpiler_cuda/memory_planning_example.py
-
-# Swizzle planning demonstration
-python3 tutorial/c2_transpiler_cuda/swizzle_planning_example.py
-
-# Scheduling algorithm visualization
-python3 tutorial/c2_transpiler_cuda/scheduling_example.py
-
-# Generated code structure examples
-python3 tutorial/c2_transpiler_cuda/codegen_example.py
-
-# Runtime concepts demonstration
-python3 tutorial/c2_transpiler_cuda/runtime_example.py
-```
-
-## 12. Key Takeaways
+## 11. Key Takeaways
 
 1. **Fusion** reduces memory traffic but is currently limited to unary operators
 2. **Layout resolution** uses Z3 to balance multiple competing objectives
