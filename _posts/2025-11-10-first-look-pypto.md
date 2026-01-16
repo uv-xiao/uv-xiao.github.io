@@ -2,7 +2,7 @@
 layout: post
 title: A First Look at PyPTO. "Tile & Human"
 date: 2025-11-10 00:00:00
-description:
+description: Exploring Huawei's PyPTO - a tile-based programming paradigm that puts humans back in the optimization loop, because sometimes NP-Hard problems need human wisdom
 tags:
 categories:
 tabs: true

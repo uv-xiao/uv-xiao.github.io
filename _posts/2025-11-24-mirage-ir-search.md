@@ -2,7 +2,7 @@
 layout: post
 title: Inside Mirage (1) - Superoptimizing Tensor Programs via MuGraph and Search
 date:  2025-11-24 00:00:00
-description:
+description: Diving into Mirage's MuGraph IR and search algorithms - how a superoptimizer finds GPU kernels that hand-written fusion rules could never dream of
 tags:
 categories:
 tabs: true
