@@ -1,139 +1,144 @@
 ---
 layout: page
-title: APS
-description: Agile Processor Specialization - Open-source hardware-software co-design framework
+title: APS/Aquas
+description: Holistic MLIR-based ASIP hardware-software co-design framework
 img:
 importance: 2
 category: research
 github: https://github.com/pku-liang/APS
 related_papers:
-  - xiao2025aps
   - zou2025aquasenhancingdomainspecialization
+  - xiao2025aps
   - peng2025clay
 ---
 
-**APS (Agile Processor Specialization)** is an open-source hardware-software co-design framework for RISC-V instruction extensions (ISAXs). It provides unified interface abstraction, ISAX-specific synthesis, and compiler infrastructure with automatic pattern matching.
+**Aquas** is a holistic MLIR-based framework for automated ASIP (Application-Specific Instruction-Set Processor) hardware-software co-design. It enhances synthesis with burst-capable DMA and HLS optimizations, and introduces an e-graph-based retargetable compiler for automatic ISAX adoption.
 
 ```
-┌───────────────────────────────────────────────────────────────────┐
-│                        APS Framework                               │
-├───────────────────────────────────────────────────────────────────┤
-│                                                                    │
-│   ISAX.cadl + App.c + Config.yml                                   │
-│          │                                                         │
-│          ▼                                                         │
-│   ┌─────────────────────────────────────────────────────────────┐ │
-│   │                    APS-Synth                                 │ │
-│   │  CADL ──► SIR ──► SSIR ──► Transactional HW ──► RTL         │ │
-│   │  (Cross-level ADL)  (Scheduled)    (CMT2/CIRCT)             │ │
-│   └─────────────────────────────────────────────────────────────┘ │
-│          │                                                         │
-│          │ semantics.json                                          │
-│          ▼                                                         │
-│   ┌─────────────────────────────────────────────────────────────┐ │
-│   │                      APSC Compiler                           │ │
-│   │  ┌──────────────┐   ┌─────────────────────┐                 │ │
-│   │  │ Pattern Match│   │ Bitwidth-Aware      │                 │ │
-│   │  │  • Semantic  │   │ Vectorization       │                 │ │
-│   │  │  • Profile   │   │ (pack low-bit ops)  │                 │ │
-│   │  └──────────────┘   └─────────────────────┘                 │ │
-│   └─────────────────────────────────────────────────────────────┘ │
-│          │                                                         │
-│          ▼                                                         │
-│   ┌─────────────────────────────────────────────────────────────┐ │
-│   │                   APS-Itfc (Unified Interface)               │ │
-│   │         ┌────────────────┬────────────────┐                  │ │
-│   │         │   RoCC Itfc    │   CV-X-IF Itfc │                  │ │
-│   │         │ (Rocket/BOOM)  │  (CV32E40X)    │                  │ │
-│   │         └────────────────┴────────────────┘                  │ │
-│   └─────────────────────────────────────────────────────────────┘ │
-└───────────────────────────────────────────────────────────────────┘
+┌────────────────────────────────────────────────────────────────────┐
+│                      Aquas Framework (MLIR)                         │
+├────────────────────────────────────────────────────────────────────┤
+│                                                                     │
+│   CADL                              C (App)                         │
+│     │                                  │                            │
+│     ▼                                  ▼                            │
+│  ┌──────────────────────┐    ┌─────────────────────────────────┐   │
+│  │  Hardware Synthesizer │    │   Retargetable Compiler         │   │
+│  │  ┌────────────────┐  │    │  ┌───────────┐   ┌───────────┐  │   │
+│  │  │ aquas dialect  │  │    │  │   MLIR    │◄─►│  e-graph  │  │   │
+│  │  │ + affine/scf   │  │    │  └─────┬─────┘   └─────┬─────┘  │   │
+│  │  └───────┬────────┘  │    │        │               │        │   │
+│  │          │ optimize  │    │   Internal    External          │   │
+│  │          ▼           │    │   Rewrites    Rewrites          │   │
+│  │  ┌────────────────┐  │    │        │               │        │   │
+│  │  │ HECTOR (tor)   │  │    │        └───────┬───────┘        │   │
+│  │  │ + scheduling   │  │    │                ▼                │   │
+│  │  └───────┬────────┘  │    │  ┌─────────────────────────┐    │   │
+│  │          │           │    │  │ Skeleton-Component      │    │   │
+│  │          ▼           │    │  │ Pattern Matching        │    │   │
+│  │  ┌────────────────┐  │    │  └───────────┬─────────────┘    │   │
+│  │  │ RTL (CIRCT)    │  │    │              ▼                  │   │
+│  │  └────────────────┘  │    │         LLVM IR → Binary        │   │
+│  └──────────────────────┘    └─────────────────────────────────┘   │
+│              │                              │                       │
+│              ▼                              ▼                       │
+│  ┌──────────────────────────────────────────────────────────────┐  │
+│  │              Rocket/BOOM Core + RoCC Adapter                  │  │
+│  │  ┌─────────┐  ┌─────────────────┐  ┌───────────────────────┐ │  │
+│  │  │ L1I/D$  │  │ Burst DMA Engine│  │ Banked Scratchpad Mem │ │  │
+│  │  └─────────┘  │ (TileLink-UH)   │  │ (partition-aware)     │ │  │
+│  │               └─────────────────┘  └───────────────────────┘ │  │
+│  └──────────────────────────────────────────────────────────────┘  │
+└────────────────────────────────────────────────────────────────────┘
 ```
 
-## Three Challenges in ISAX Development
+## CADL with Optimization Directives
 
-| Challenge | Problem | APS Solution |
-|-----------|---------|--------------|
-| Interface Divergence | RoCC vs CV-X-IF incompatible | **APS-Itfc**: unified transaction-based abstraction |
-| ISAX-Specific Synthesis | HLS ignores processor interaction | **APS-Synth**: CADL with memory/register access |
-| Compiler Support | Manual intrinsic insertion | **APSC**: automatic pattern matching + vectorization |
-
-## CADL: Cross-level Architecture Description Language
-
-CADL bridges high-level behavior and low-level hardware:
+Aquas extends CADL with blockwise memory access and synthesis directives:
 
 ```rust
-#[opcode(7'b0001011)]
-#[funct7(7'b0000000)]
-rtype butterfly(rs1: u5, rs2: u5, rd: u5) {
-    let a: u32 = _irf[rs1];      // Read register file
-    let b: u32 = _irf[rs2];
-    with i: u32 = (32'd0, i_)    // Hardware loop
-    do {
-        let x: u32 = _mem[i];    // Memory access
-        acc = acc + barrett_mul(x, zeta);
-    } while (i_ < n);
-    _irf[rd] = acc;              // Write back
+#[partition_array([0],[4],"C")]      // Cyclic partition into 4 banks
+static mat: [i32; 16];
+#[partition_array([0],[4],"C")]
+static vec: [i32; 4];
+
+rtype gemv(rs1: u5, rs2: u5, rd: u5) {
+    let ia: u32 = _irf[rs1];
+    let oa: u32 = _irf[rs2];
+    mat[0+:] = _blockld[ia +:16];    // Burst load 16 elements
+    vec[0+:] = _blockld[ia+64 +:4];  // Burst load 4 elements
+    with i: u32 = (0, i+1) do {
+        acc = 0;
+        #[unroll(4)]                  // Full unroll inner loop
+        with j: u32 = (0, j_) do {
+            acc += mat[i*4+j] * vec[j];
+        } while (j_ < 4);
+        res[i] = acc;
+    } while (i + 1 < 4);
+    _irf[rd] = 0;
 }
 ```
 
-**Key features**:
-- Direct access to `_irf` (register file) and `_mem` (processor memory)
-- Stateful control: hardware loops, pipelines
-- Custom component instantiation (CMT2 modules or Verilog blackboxes)
-- Compilation-time functions for metaprogramming
+## Fast Memory Access via DMA
 
-## Synthesis Flow
+Aquas synthesizes a burst-capable DMA engine to overcome memory bottlenecks:
 
+| Access Method | Latency | Throughput | Use Case |
+|---------------|---------|------------|----------|
+| **RoCC port** (single-shot) | 2-3 cycles/elem | Low | Small transfers |
+| **Burst DMA** (TileLink-UH) | 15 cycles init | 1 elem/cycle sustained | Large blocks |
+
+**Implementation selection** via ILP optimization:
 ```
-CADL ──► SIR ──► SSIR ──► Transactional Hardware ──► RTL
-         │       │               │
-         │       │               └─► CMT2 + CIRCT
-         │       └─► SDC-based scheduling
-         └─► Type inference, function interpretation
-```
-
-**Dynamic Pipeline Architecture**: Each stage becomes a transaction with fire logic. Loops get entry/exit transactions with iteration counters.
-
-## APSC Compiler
-
-Two-stage pattern matching:
-1. **Semantic-based**: Parse SIR to construct LLVM pattern matchers for instruction sequences
-2. **Profile-guided**: For complex control flow (nested loops), compare input-output behavior against ISAX semantics
-
-**Bitwidth-Aware Vectorization**: Pack multiple low-bitwidth operations into one ISAX call:
-```c
-// Before: 4 separate 8-bit×2-bit dot products
-for (int i = 0; i < 8; i++)
-    out += DotprodW2A8(activate[i], weight[i]);
-
-// After: Vectorized with bit packing
-for (int i = 0; i < 8; i += 4)
-    out += DotprodW2A8x4(pack_rs1(activate[i:i+3]),
-                         pack_rs2(weight[i:i+3]));
+min  Σ t_bur(b)·x_bur,b + t_ss·x_ss
+s.t. Σ b·x_bur,b + d_ss·x_ss ≥ D
 ```
 
-## Results
+**Partition-aware access**: DMA distributes each 64-bit word across multiple banks in one cycle.
 
-Case studies with **fewer than 175 SLOC** in CADL each:
+## E-Graph-Based Retargetable Compiler
 
-| Domain | ISAX | Croc Speedup | Rocket Speedup |
-|--------|------|--------------|----------------|
-| **Post-Quantum Crypto** | Butterflyx2 (NTT) | 6.24× | 10.16× |
-| | Karatsuba (PWM) | 10.16× | 14.99× |
-| **ML (BitNet b1.58)** | dotprodW2A8x4 | 2.03× | 2.29× |
-| **DSP (DPLL)** | IIR filter | 5.51× | 6.03× |
+### Bidirectional MLIR ↔ E-graph Translation
 
-Area overhead: 1-20% depending on platform and ISAX complexity.
+- **MLIR → e-graph**: Operations become e-nodes; blocks become `tuple(...)` of roots
+- **E-graph → MLIR**: Witness extraction reconstructs SSA form
 
-## Supported Platforms
+### Hybrid Rewriting
 
-- **Chipyard/Rocket**: 5-stage in-order core with RoCC interface
-- **PULP/Croc**: CV32E40X 4-stage in-order core with CV-X-IF interface
+| Rewrite Type | Mechanism | Purpose |
+|--------------|-----------|---------|
+| **Internal** | Egglog fixpoint reasoning | Dataflow equivalences (e.g., `x<<2 ⇝ x*4`) |
+| **External** | MLIR passes via e-graph | Control-flow transforms (tiling, unrolling) |
 
-APS-Itfc adapter: ~425 SLOC for RoCC, ~763 SLOC for CV-X-IF.
+### Skeleton-Component Pattern Matching
+
+ISAXs are decomposed into:
+- **Skeleton**: Control structure (loop nesting, trip counts)
+- **Components**: Dataflow patterns rooted at side-effect nodes
+
+```
+ISAX gemv:
+  Skeleton: for i { for j*2 { ... } }
+  Components: [yield(acc1,acc2), store(c_ptr)]
+```
+
+Matching engine: tag components via Egglog rules → skeleton matcher validates structure → emit ISAX node.
+
+## Hardware Synthesis Flow
+
+```
+CADL ──► Pre-Opt MLIR ──► Optimize ──► Schedule ──► FIRRTL ──► Verilog
+              │              │            │
+              │   (affine    │  (modulo   └──► CIRCT
+              │    raises)   │   sched)
+              │              │
+              └── aquas dialect ops: readrf, writerf, blockload, memstore
+```
+
+**Dynamic pipeline elaboration**: Each stage is a transaction with valid-ready handshakes. Loops decompose into entry/body/next transactions.
 
 ## Links
 
 - [Project Website](https://aps.ericlyun.me) with tutorials and documentation
 - [GitHub](https://github.com/pku-liang/APS)
+- Built on [MLIR](https://mlir.llvm.org/), [CIRCT](https://circt.llvm.org/), and [HECTOR](https://github.com/pku-liang/Hector)

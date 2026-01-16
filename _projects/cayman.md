@@ -1,7 +1,7 @@
 ---
 layout: page
 title: Cayman
-description: Automatic accelerator generation with control flow and memory optimization
+description: Automatic accelerator generation with control flow and data access optimization
 img:
 importance: 5
 category: research
@@ -9,84 +9,155 @@ related_papers:
   - xiao2025cayman
 ---
 
-**Cayman** is a framework for automatic domain-specific accelerator generation that jointly optimizes control flow and data access patterns - two aspects often ignored by existing tools.
+**Cayman** is the first end-to-end framework that synthesizes high-performance custom accelerators with full control flow and data access support, automating both candidate selection and hardware synthesis.
 
 ```
 ┌────────────────────────────────────────────────────────────────┐
-│                   Cayman Accelerator Generator                  │
+│                      Cayman Framework                           │
 ├────────────────────────────────────────────────────────────────┤
 │                                                                 │
-│   Application                                                   │
-│       │                                                         │
-│       ▼                                                         │
-│   ┌───────────────────────────────────────────────────────┐    │
-│   │                    Cayman                              │    │
-│   │  ┌─────────────┐          ┌─────────────┐             │    │
-│   │  │Control Flow │◄────────►│   Memory    │             │    │
-│   │  │Optimization │  Joint   │   System    │             │    │
-│   │  │             │  Opt.    │   Design    │             │    │
-│   │  │• Branches   │          │• Prefetch   │             │    │
-│   │  │• Speculation│          │• Banking    │             │    │
-│   │  │• Predication│          │• Caching    │             │    │
-│   │  └─────────────┘          └─────────────┘             │    │
-│   └───────────────────────────────────────────────────────┘    │
-│       │                                                         │
-│       ▼                                                         │
-│   Accelerator RTL (handles irregular apps!)                     │
+│   Application ──► LLVM IR ──┬──► profile/analyze                │
+│                             │                                   │
+│                             └──► build wPST                     │
+│                                     │                           │
+│   ┌─────────────────────────────────▼─────────────────────────┐│
+│   │              Candidate Selection (DP)                      ││
+│   │  ┌─────────┐   ┌─────────────┐   ┌──────────────────────┐ ││
+│   │  │  wPST   │──►│ Accelerator │──►│ Pareto-optimal       │ ││
+│   │  │traversal│   │   Model     │   │ Solutions            │ ││
+│   │  └─────────┘   │ • Ctrl-flow │   │ (speedup vs area)    │ ││
+│   │                │ • Interface │   └──────────────────────┘ ││
+│   │                └─────────────┘                             ││
+│   └────────────────────────────────────────────────────────────┘│
+│                             │                                   │
+│                             ▼                                   │
+│   ┌─────────────────────────────────────────────────────────┐  │
+│   │              Accelerator Merging                         │  │
+│   │   DFG₁ + DFG₂ ──► Reconfigurable Datapath + FSMs        │  │
+│   └─────────────────────────────────────────────────────────┘  │
+│                             │                                   │
+│                             ▼                                   │
+│                      Hardware (Verilog)                         │
 └────────────────────────────────────────────────────────────────┘
 ```
 
-## Beyond Embarrassingly Parallel Kernels
+## Limitations of Prior Work
 
-Most accelerator generators assume your computation is:
-- Perfectly nested loops
-- Regular array accesses
-- No data-dependent control flow
+| Approach | Candidate Selection | Control Flow | Data Access | Hardware Sharing |
+|----------|--------------------:|--------------|-------------|------------------|
+| **HLS** | manual | optimized | specified | / |
+| **CFU synthesis** | auto (DFG only) | / | scalar-only | restricted |
+| **Off-core accel** | auto | sequential | slow | restricted |
+| **Cayman** | **auto** | **optimized** | **specialized** | **flexible** |
 
-Real applications have:
-- **Irregular control flow**: Branches, early exits, data-dependent iteration
-- **Complex memory patterns**: Indirect accesses, sparse data structures
-- **Variable latency operations**: Cache misses, memory bank conflicts
+Prior frameworks either exclude control flow/memory access, or only synthesize sequential control with slow interfaces.
 
-Cayman handles the messy reality.
+## Whole-Application Program Structure Tree (wPST)
 
-## The Cayman Approach
+Cayman extends the traditional PST to capture all SESE (single-entry-single-exit) regions as acceleration candidates:
 
-### 1. Application Profiling
-Analyze your application to understand:
-- Hot loops and their control flow patterns
-- Memory access patterns and reuse distances
-- Data-dependent behavior
+```
+                    root
+                   /    \
+              func0      func1
+              /              \
+         loop            loop outer
+        linear          /    |    \
+          |          entry  head  exit
+        linear              |
+                       loop dot-product
+                       /    |    \
+                    head  body  cond
+```
 
-### 2. Control Flow Optimization
-Transform irregular control into hardware-friendly forms:
-- **Branch prediction hints**: When branches are predictable
-- **Speculative execution**: When wrong paths are cheap
-- **Control flow elimination**: When branches can become data flow
+Two region types:
+- **bb regions**: Basic blocks (dataflow graphs)
+- **ctrl-flow regions**: Loops and conditionals
 
-### 3. Memory System Design
-Automatically design the memory hierarchy:
-- **Prefetching strategies**: Based on observed access patterns
-- **Banking configurations**: To maximize parallel access
-- **Caching policies**: For irregular reuse patterns
+## Data Access Interface Modeling
 
-### 4. Joint Optimization
-Control and memory decisions interact:
-- Speculation affects memory bandwidth needs
-- Memory latency affects control flow choices
+Cayman systematically models three processor-accelerator interfaces:
 
-Cayman uses **dynamic programming** to efficiently explore this joint space.
+| Interface | Mechanism | Best For | Overhead |
+|-----------|-----------|----------|----------|
+| **Coupled** | ld/st units stall on access | Simple access | Low |
+| **Decoupled** | AGUs compute addresses independently | Stream patterns in pipelined loops | Medium (AGUs + FIFOs) |
+| **Scratchpad** | Dedicated buffer + DMA sync | High reuse (access count >> footprint) | High (buffer + DMA) |
 
-## Key Results
+**Impact example** (dot product `sum += x[i]*y[i]`):
 
-- **Handles irregular applications** that other tools reject
-- **Joint optimization** finds better designs than separate passes
-- **Competitive performance** with hand-designed accelerators
+| Control Flow | Coupled | Decoupled | Scratchpad |
+|--------------|---------|-----------|------------|
+| Sequential | 6N cycles | 4N cycles | - |
+| Pipelined | II=3 | II=1 | - |
+| Unrolled(2) | 9(N/2) | - | 4(N/2) |
 
-## Target Applications
+## Candidate Selection Algorithm
 
-Cayman excels at applications that traditional HLS struggles with:
-- Graph algorithms (sparse, irregular)
-- Tree traversals (data-dependent control)
-- Sparse linear algebra (indirect memory access)
-- Database operations (variable-length records)
+Dynamic programming on wPST with heuristic pruning:
+
+```python
+def DP(vertex v):
+    if prune(v, R): return
+    if v is bb:
+        F[v] = filter(pareto(accel(v, R)))
+    else:
+        F[v] = ∅
+        for u in v.children:
+            DP(u)
+            F[v] = filter(F[v] ⊗ F[u])
+        if v is ctrl-flow:
+            F[v] = filter(F[v] ∪ pareto(accel(v, R)))
+```
+
+- **F[v]**: Pareto-optimal solutions for subtree rooted at v
+- **⊗**: Combines sibling solutions
+- **filter**: Removes solutions too close in area (keeps O(log A) solutions)
+- **Complexity**: O(N log²A + E)
+
+## Accelerator Merging
+
+Cayman enables reusable accelerators across kernels with diverse control flows:
+
+```
+┌─────────────────────────────────────────────────────┐
+│        Merged Accelerator                            │
+│  ┌────────────────────────────────────────────────┐ │
+│  │ Reconfigurable Datapath (from DFG₁ ∪ DFG₂)     │ │
+│  │  LD ──► MUL ──► ADD ──► ST                     │ │
+│  │   ↑              ↑                              │ │
+│  │  MUX            MUX  ◄── configBits            │ │
+│  └────────────────────────────────────────────────┘ │
+│       ↑ ctrlSignals                                  │
+│  ┌────┴────┐                                        │
+│  │  Ctrl   │◄── select                              │
+│  └────┬────┘                                        │
+│    ┌──┴──┐                                          │
+│ FSM₁   FSM₂  (standalone FSMs for each kernel)     │
+│ linear  dot-prod                                    │
+└─────────────────────────────────────────────────────┘
+```
+
+**Key insight**: Basic blocks with FP ops and data access dominate area; control FSMs are cheap. Merge datapaths, keep separate FSMs.
+
+## Performance Estimation
+
+Speedup calculation without full synthesis:
+
+```
+Speedup = T_all / (T_all - T_cand + Cycle_cand / F)
+```
+
+Where:
+- **T_all**: Total application duration (profiled)
+- **T_cand**: Duration of accelerated kernels (profiled)
+- **Cycle_cand**: Estimated accelerator cycles (from scheduling)
+- **F**: Target frequency
+
+## Implementation
+
+Built on LLVM 18:
+- **wPST**: RegionInfoAnalysis pass
+- **Profiling**: Custom instrumentation pass
+- **Analysis**: MemoryDependenceAnalysis + ScalarEvolution
+- **Synthesis**: OpenROAD targeting Nangate45 PDK

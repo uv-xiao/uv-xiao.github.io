@@ -7,9 +7,9 @@ importance: 4
 category: tools
 github: https://github.com/pku-liang/Cement
 related_papers:
-  - xiao2024cement
-  - xiao2025cmt2
   - xiao2025cement2temporalhardwaretransactions
+  - xiao2025cmt2
+  - xiao2024cement
 ---
 
 **Cement** is a hardware design framework comprising **CmtHDL** (an embedded HDL in Rust) and **CmtC** (a compiler with timing analysis and control synthesis). It enables productive FPGA programming while preserving cycle-deterministic behavior and timing awareness.
