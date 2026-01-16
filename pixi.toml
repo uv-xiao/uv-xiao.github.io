@@ -23,6 +23,7 @@ install = { cmd = "bash scripts/install.sh", description = "Install Ruby gems an
 
 # Development server
 serve = { cmd = "bash scripts/serve.sh", description = "Start Jekyll development server with live reload" }
+serve-with-slides = { depends-on = ["build-slides"], cmd = "bash scripts/serve.sh", description = "Build slides then start Jekyll server" }
 dev = { depends-on = ["serve"], description = "Alias for serve command" }
 
 # Content creation
