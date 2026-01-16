@@ -1,0 +1,7 @@
+{% if include.keys %}
+<div class="publications">
+  {% for key in include.keys %}
+    {% bibliography --query @*[key={{key}}]* %}
+  {% endfor %}
+</div>
+{% endif %}
