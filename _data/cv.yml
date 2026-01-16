@@ -1,0 +1,139 @@
+- title: General Information
+  type: map
+  contents:
+    - name: Full Name
+      value: Youwei Xiao (肖有为)
+    - name: Email
+      value: shallwe@pku.edu.cn
+    - name: Phone
+      value: +86 185 1920 4005
+
+- title: Education
+  type: time_table
+  contents:
+    - title: Ph.D. Candidate in Integrated Circuit Science and Engineering
+      institution: School of Integrated Circuits, Peking University
+      location: Beijing, China
+      year: 2022 - Present
+      description:
+        - "Advisor: Prof. Yun Liang"
+        - "Research: Compilers, DSLs, and hardware-software co-design for MLSys and EDA"
+    - title: Bachelor of Science in Computer Science
+      institution: School of EECS, Peking University
+      location: Beijing, China
+      year: 2018 - 2022
+
+- title: Research Interests
+  type: nested_list
+  contents:
+    - title: Hardware Synthesis & EDA
+      items:
+        - Domain-specific languages for hardware description
+        - Multi-level intermediate representations for HLS
+        - E-graph based optimization for hardware synthesis
+    - title: Computer Architecture
+      items:
+        - Automated accelerator generation
+        - Custom instruction design and reuse
+        - Hardware-software co-design frameworks
+    - title: ML Compilers & Systems
+      items:
+        - Tensor compiler optimization
+        - Distributed and mega-kernel compilation
+        - LLM inference optimization
+
+- title: Selected Publications
+  type: time_table
+  contents:
+    - title: "ISAMORE: Finding Reusable Instructions via E-Graph Anti-Unification"
+      institution: ASPLOS 2026
+      year: 2026
+      description:
+        - "Youwei Xiao, Chenyun Yin, Yitian Sun, Yun Liang"
+    - title: "APS: Open-Source Hardware-Software Co-Design Framework for Agile Processor Specialization"
+      institution: ICCAD 2025 (Invited Paper)
+      year: 2025
+      description:
+        - "Youwei Xiao, Yuyang Zou, Yansong Xu, et al."
+    - title: "Clay: High-level ASIP Framework for Flexible Microarchitecture-Aware Instruction Customization"
+      institution: ICCAD 2025
+      year: 2025
+      description:
+        - "Weijie Peng*, Youwei Xiao*, Yuyang Zou, et al. (*Equal contribution)"
+    - title: "Cayman: Custom Accelerator Generation with Control Flow and Data Access Optimization"
+      institution: DAC 2025
+      year: 2025
+      description:
+        - "Youwei Xiao, Fan Cui, Zizhang Luo, Weijie Peng, Yun Liang"
+    - title: "Cement: Streamlining FPGA Hardware Design with Cycle-Deterministic eHDL and Synthesis"
+      institution: FPGA 2024
+      year: 2024
+      description:
+        - "Youwei Xiao, Zizhang Luo, Kexing Zhou, Yun Liang"
+    - title: "HECTOR: A Multi-Level Intermediate Representation for Hardware Synthesis Methodologies"
+      institution: ICCAD 2022
+      year: 2022
+      description:
+        - "Ruifan Xu, Youwei Xiao, Jin Luo, Yun Liang"
+
+- title: Honors and Awards
+  type: time_table
+  contents:
+    - title: Yang Fuqing & Wang Yangyuan Academician Scholarship
+      institution: Awarded to only 5 students at EECS, Peking University, for academic excellence
+      year: 2018-2019
+    - title: Shenzhen Stock Exchange Scholarship
+      institution: Awarded to 17 students from EECS, Peking University
+      year: 2019-2020
+    - title: Merit Student
+      institution: Awarded to top 10% students for comprehensive excellence
+      year: 2018-2020
+    - title: Second Place in EDAthon 2020
+      institution: IEEE CEDA Hong Kong Chapter - Programming Competition on Electronic Design Automation
+      year: August 2020
+    - title: Second Prize in NOI 2017
+      institution: National Olympiad in Informatics, China Computer Federation
+      year: July 2017
+    - title: Second Prize in APIO 2017
+      institution: Asia Pacific Informatics Olympiad (China District), China Computer Federation
+      year: May 2017
+
+- title: Tutorials
+  type: time_table
+  contents:
+    - title: "APS: An MLIR-Based Hardware-Software Co-design Framework"
+      institution: ASP-DAC 2026, Tokyo, Japan
+      year: January 2026
+    - title: "Agile Hardware Specialization: A toolbox for Agile Chip Front-end Design"
+      institution: ISEDA 2025, Xi'an, China
+      year: May 2025
+    - title: "Agile Hardware Specialization (AHS): A toolbox for Agile Chip Front-end Design"
+      institution: ASPLOS 2025, Rotterdam, Netherlands
+      year: March 2025
+    - title: "Agile Hardware Specialization: A toolbox for Agile Chip Front-end Design"
+      institution: DATE 2025, Lyon, France
+      year: March 2025
+    - title: "AHS: An EDA toolbox for Agile Chip Front-end Design"
+      institution: ASP-DAC 2025, Tokyo, Japan
+      year: January 2025
+
+- title: Teaching Experience
+  type: time_table
+  contents:
+    - title: Teaching Assistant - High-level Chip Design
+      institution: Peking University
+      year: Spring 2022 & Fall 2022
+    - title: Teaching Assistant - Introduction to Computer Systems
+      institution: Peking University
+      year: Fall 2020
+
+- title: Skills
+  type: nested_list
+  contents:
+    - title: Programming Languages
+      items:
+        - "Rust, C++, Python, Scala, Verilog, CUDA"
+    - title: Tools & Frameworks
+      items:
+        - "Compiler Infrastructure: MLIR, LLVM"
+        - "ML Frameworks: PyTorch, Tilelang, Triton"
