@@ -2,19 +2,19 @@
 # Site settings
 # -----------------------------------------------------------------------------
 
-title: uv-xiao # the website title (if blank, full name will be used instead)
+title: Youwei Xiao # the website title (if blank, full name will be used instead)
 first_name: Youwei
 middle_name:
 last_name: Xiao
 email: shallwexiao@gmail.com
 description: > # the ">" symbol means to ignore newlines until "footer_text:"
-  Ph.D. candidate at Peking University focusing on software techniques for architecture-hardware co-specialization.
+  Ph.D. candidate at Peking University. Research on compilers, DSLs, and hardware-software co-design for MLSys and EDA.
 footer_text: >
   Powered by <a href="https://jekyllrb.com/" target="_blank">Jekyll</a> with <a href="https://github.com/alshedivat/al-folio">al-folio</a> theme.
   Hosted by <a href="https://pages.github.com/" target="_blank">GitHub Pages</a>.
-keywords: # add your own keywords or leave empty
+keywords: compilers, hardware synthesis, DSL, MLSys, EDA, e-graphs, FPGA, ASIC
 lang: en # the language of your site (for example: en, fr, cn, ru, etc.)
-icon: ⚛️ # the emoji used as the favicon (alternatively, provide image name in /assets/img/)
+icon: megacat.ico # the emoji used as the favicon (alternatively, provide image name in /assets/img/)
 
 url: https://uv-xiao.github.io # the base hostname & protocol for your site
 baseurl: # the subpath of your site, e.g. /blog/. Leave blank for root
@@ -191,7 +191,7 @@ collections:
     output: false
     permalink: /:collection/:title/
   projects:
-    output: false
+    output: true
     permalink: /:collection/:title/
 
 announcements:
@@ -245,7 +245,6 @@ exclude:
   - vendor
   - newpost.sh
   - localdeploy.sh
-  - _projects/
   - _news/
   - .vscode/
   - _slide/
@@ -492,7 +491,7 @@ third_party_libraries:
     version: "5.5.0"
   google_fonts:
     url:
-      fonts: "https://fonts.googleapis.com/css2?family=Share+Tech&family=Share+Tech+Mono&family=Indie+Flower:wght@400&family=Material+Icons&display=swap"
+      fonts: "https://fonts.googleapis.com/css2?family=Share+Tech&family=JetBrains+Mono:wght@400;500;600&family=Indie+Flower:wght@400&family=Material+Icons&display=swap"
   highlightjs:
     integrity:
       css:
@@ -634,9 +633,10 @@ third_party_libraries:
 # Get external JSON data
 # -----------------------------------------------------------------------------
 
-jekyll_get_json:
-  - data: resume
-    json: assets/json/resume.json # it can also be an url
+# Disabled - using _data/cv.yml instead
+# jekyll_get_json:
+#   - data: resume
+#     json: assets/json/resume.json # it can also be an url
 jsonresume:
   - basics
   - work

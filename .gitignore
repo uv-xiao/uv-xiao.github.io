@@ -21,3 +21,12 @@ pixi.lock
 google-chrome-stable_current_amd64.deb
 *.log
 *.bak
+
+# LaTeX build artifacts
+*.aux
+*.out
+*.toc
+*.fdb_latexmk
+*.fls
+*.synctex.gz
+_cv_latex/*.pdf

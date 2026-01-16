@@ -18,6 +18,15 @@ layout: default
     {{ content }}
   </article>
 
+  {% if page.related_papers %}
+    <h2>Related Publications</h2>
+    <div class="publications">
+      {% for key in page.related_papers %}
+        {% bibliography --query @*[key={{key}}]* %}
+      {% endfor %}
+    </div>
+  {% endif %}
+
   {% if page.related_publications %}
     <h2>References</h2>
     <div class="publications">
