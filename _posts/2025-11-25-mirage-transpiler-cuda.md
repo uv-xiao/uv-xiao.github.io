@@ -39,51 +39,51 @@ The transpiler consists of two major components:
 1. **The Transpiler** (`src/transpiler/`): Translates MuGraph into CUDA code
 2. **The Runtime** (`include/mirage/transpiler/runtime/`): Header-only library providing optimized kernels for the generated code
 
-```
-┌─────────────────────┐
-│   Kernel Graph      │
-│   (MuGraph)         │
-└─────────┬───────────┘
-          │
-          ▼
-┌─────────────────────┐
-│   Transpiler        │
-│  ┌───────────────┐  │
-│  │ Fusion        │  │
-│  │ Resolution    │  │
-│  └───────┬───────┘  │
-│          ▼          │
-│  ┌───────────────┐  │
-│  │ Layout        │  │
-│  │ Resolution    │  │
-│  └───────┬───────┘  │
-│          ▼          │
-│  ┌───────────────┐  │
-│  │ TB Graph      │  │
-│  │ Scheduling    │  │
-│  └───────┬───────┘  │
-│          ▼          │
-│  ┌───────────────┐  │
-│  │ Swizzle       │  │
-│  │ Planning      │  │
-│  └───────┬───────┘  │
-│          ▼          │
-│  ┌───────────────┐  │
-│  │ Memory        │  │
-│  │ Planning      │  │
-│  └───────┬───────┘  │
-│          ▼          │
-│  ┌───────────────┐  │
-│  │ Code          │  │
-│  │ Generation    │  │
-│  └───────────────┘  │
-└─────────┬───────────┘
-          │
-          ▼
-┌─────────────────────┐
-│   Generated CUDA    │
-│   + Runtime Headers │
-└─────────────────────┘
+```text
++---------------------+
+|   Kernel Graph      |
+|   (MuGraph)         |
++---------+-----------+
+          |
+          v
++---------------------+
+|   Transpiler        |
+|  +---------------+  |
+|  | Fusion        |  |
+|  | Resolution    |  |
+|  +-------+-------+  |
+|          v          |
+|  +---------------+  |
+|  | Layout        |  |
+|  | Resolution    |  |
+|  +-------+-------+  |
+|          v          |
+|  +---------------+  |
+|  | TB Graph      |  |
+|  | Scheduling    |  |
+|  +-------+-------+  |
+|          v          |
+|  +---------------+  |
+|  | Swizzle       |  |
+|  | Planning      |  |
+|  +-------+-------+  |
+|          v          |
+|  +---------------+  |
+|  | Memory        |  |
+|  | Planning      |  |
+|  +-------+-------+  |
+|          v          |
+|  +---------------+  |
+|  | Code          |  |
+|  | Generation    |  |
+|  +---------------+  |
++---------+-----------+
+          |
+          v
++---------------------+
+|   Generated CUDA    |
+|   + Runtime Headers |
++---------------------+
 ```
 
 ### 1.2 Source Code Structure

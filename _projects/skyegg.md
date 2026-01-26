@@ -11,37 +11,37 @@ related_papers:
 
 **SkyEgg** is a hardware synthesis framework that jointly optimizes implementation selection and scheduling using e-graphs. It overcomes the suboptimality of sequential HLS phases by representing both algebraic rewrites and hardware implementations as rewrite rules.
 
-```
-┌──────────────────────────────────────────────────────────────────┐
-│                      SkyEgg Framework                             │
-├──────────────────────────────────────────────────────────────────┤
-│                                                                   │
-│   MLIR Program              Library (DSP48E2, LUT, FP IPs)        │
-│        │                           │                              │
-│        ▼                           │ Implementation Rules         │
-│   ┌──────────┐                     │ -(A+D)*B ⇝ DSP(Vec(A,D,B))   │
-│   │ E-graph  │◄────────────────────┘ A*B ⇝ DSP(Vec(A,B))          │
-│   │  init    │                       A+B ⇝ LUT(Vec(A,B))          │
-│   └────┬─────┘                                                    │
-│        │ Equality Saturation (algebraic + impl rewrites)          │
-│        ▼                                                          │
-│   ┌──────────────────────────────────────────────────────┐       │
-│   │              E-graph saturate                         │       │
-│   │  ┌─────┐   ┌─────┐   ┌─────┐                         │       │
-│   │  │ a+b │ ≡ │ LUT │   │ DSP │  ◄── same e-class       │       │
-│   │  └─────┘   └─────┘   └─────┘                         │       │
-│   └────────────────────────┬─────────────────────────────┘       │
-│                            │                                      │
-│        ┌───────────────────┼───────────────────┐                 │
-│        ▼                   ▼                   ▼                  │
-│   ┌─────────┐        ┌──────────┐        ┌──────────┐            │
-│   │  MILP   │        │   ASAP   │        │  Timing  │            │
-│   │ Solver  │        │ Heuristic│        │  Model   │            │
-│   └────┬────┘        └────┬─────┘        └──────────┘            │
-│        └────────┬─────────┘                                       │
-│                 ▼                                                 │
-│   (impl_selection, schedule) ──► Verilog                          │
-└──────────────────────────────────────────────────────────────────┘
+```text
++----------------------------------------------------------------+
+|                      SkyEgg Framework                          |
++----------------------------------------------------------------+
+|                                                                |
+|  MLIR Program              Library (DSP48E2, LUT, FP IPs)      |
+|       |                           |                            |
+|       v                           | Implementation Rules       |
+|  +----------+                     | -(A+D)*B => DSP(Vec(A,D,B))|
+|  | E-graph  |<--------------------+ A*B => DSP(Vec(A,B))       |
+|  |  init    |                       A+B => LUT(Vec(A,B))       |
+|  +----+-----+                                                  |
+|       | Equality Saturation (algebraic + impl rewrites)        |
+|       v                                                        |
+|  +----------------------------------------------------------+  |
+|  |              E-graph saturate                            |  |
+|  |  +-----+   +-----+   +-----+                             |  |
+|  |  | a+b | = | LUT |   | DSP |  <-- same e-class           |  |
+|  |  +-----+   +-----+   +-----+                             |  |
+|  +----------------------------+-----------------------------+  |
+|                               |                                |
+|       +-----------------------+-------------------+            |
+|       v                       v                   v            |
+|  +---------+            +----------+        +----------+       |
+|  |  MILP   |            |   ASAP   |        |  Timing  |       |
+|  | Solver  |            | Heuristic|        |  Model   |       |
+|  +----+----+            +----+-----+        +----------+       |
+|       +--------+---------+                                     |
+|                v                                               |
+|  (impl_selection, schedule) --> Verilog                        |
++----------------------------------------------------------------+
 ```
 
 ## The Sequential Synthesis Dilemma
@@ -63,12 +63,12 @@ The optimal solution requires **algebraic rewriting** (`-(a+b)*c → -((a+b)*c)`
 
 SkyEgg models hardware implementations as e-graph rewrite rules:
 
-```
-Matcher             ⇝ Applier                   [Condition]
-────────────────────────────────────────────────────────────
--((A+D)*B)          ⇝ DSP(Vec(A,D,B))          [A≤30b, D≤27b, B≤18b]
-A*B                 ⇝ DSP(Vec(A,B))            [integer types]
-A+B                 ⇝ LUT(Vec(A,B))            [any type]
+```text
+Matcher             => Applier                   [Condition]
+------------------------------------------------------------
+-((A+D)*B)          => DSP(Vec(A,D,B))          [A<=30b, D<=27b, B<=18b]
+A*B                 => DSP(Vec(A,B))            [integer types]
+A+B                 => LUT(Vec(A,B))            [any type]
 ```
 
 Each implementation has **configurable pipeline registers**:
@@ -79,16 +79,16 @@ Each implementation has **configurable pipeline registers**:
 
 For each implementation, profile from Vivado synthesis:
 
-```
+```text
                     t_incoming
-              ┌────────┬─────────┐
-    Input ───►│ Stage 0│  Reg 1  │───► ...
-              └────────┴─────────┘
-                          │
-                          ▼ t_cycle (register-to-register)
-              ┌────────┬─────────┐
-         ...──│ Stage L│   Out   │───► t_outgoing
-              └────────┴─────────┘
+              +--------+---------+
+    Input --->| Stage 0|  Reg 1  |---> ...
+              +--------+---------+
+                          |
+                          v t_cycle (register-to-register)
+              +--------+---------+
+         ...--| Stage L|   Out   |---> t_outgoing
+              +--------+---------+
 ```
 
 **Chain delay** between implementations determines if pipeline registers must be inserted.

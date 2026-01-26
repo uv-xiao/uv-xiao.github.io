@@ -59,13 +59,13 @@ pseudocode: true
 ### 初始化项目
 
 最开始我创建的文件结构：
-```
+```text
 cse_incentive/
-├── .claude/
-├──── settings.local.json
-├── resources/
-├──── red_notebook_image.jpg
-├── README.md
++-- .claude/
+|   +-- settings.local.json
++-- resources/
+|   +-- red_notebook_image.jpg
++-- README.md
 ```
 也就是把那个小红书图片放进resources文件夹，在`.claude`文件夹里粘贴一个`settings.local.json`（设置`"permissions"`的`"defaultMode"`为`"bypassPermissions"`），然后写一个`README.md`。
 
@@ -177,15 +177,15 @@ The system consists of three main functional modules:
 ## File Structure (Planned)
 
 diary/
-├── main.py                 # Entry point
-├── modules/
-│   ├── questionnaire.py    # Daily questionnaire generation
-│   ├── scoring.py          # Points calculation logic
-│   ├── report_generator.py # PDF report creation
-│   └── data_manager.py     # Data persistence
-├── data/                   # Store user responses and points
-├── reports/                # Generated PDF reports
-└── resources/              # Static resources including red_black_list.jpg
++-- main.py                 # Entry point
++-- modules/
+|   +-- questionnaire.py    # Daily questionnaire generation
+|   +-- scoring.py          # Points calculation logic
+|   +-- report_generator.py # PDF report creation
+|   +-- data_manager.py     # Data persistence
++-- data/                   # Store user responses and points
++-- reports/                # Generated PDF reports
++-- resources/              # Static resources including red_black_list.jpg
 ```
 
 看起来已经不错了，初具雏形！但我比较喜欢用[pixi](https://pixi.sh/latest/)来管理项目，于是我让Claude Code使用它:

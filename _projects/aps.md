@@ -14,42 +14,42 @@ related_papers:
 
 **Aquas** is a holistic MLIR-based framework for automated ASIP (Application-Specific Instruction-Set Processor) hardware-software co-design. It enhances synthesis with burst-capable DMA and HLS optimizations, and introduces an e-graph-based retargetable compiler for automatic ISAX adoption.
 
-```
-┌────────────────────────────────────────────────────────────────────┐
-│                      Aquas Framework (MLIR)                         │
-├────────────────────────────────────────────────────────────────────┤
-│                                                                     │
-│   CADL                              C (App)                         │
-│     │                                  │                            │
-│     ▼                                  ▼                            │
-│  ┌──────────────────────┐    ┌─────────────────────────────────┐   │
-│  │  Hardware Synthesizer │    │   Retargetable Compiler         │   │
-│  │  ┌────────────────┐  │    │  ┌───────────┐   ┌───────────┐  │   │
-│  │  │ aquas dialect  │  │    │  │   MLIR    │◄─►│  e-graph  │  │   │
-│  │  │ + affine/scf   │  │    │  └─────┬─────┘   └─────┬─────┘  │   │
-│  │  └───────┬────────┘  │    │        │               │        │   │
-│  │          │ optimize  │    │   Internal    External          │   │
-│  │          ▼           │    │   Rewrites    Rewrites          │   │
-│  │  ┌────────────────┐  │    │        │               │        │   │
-│  │  │ HECTOR (tor)   │  │    │        └───────┬───────┘        │   │
-│  │  │ + scheduling   │  │    │                ▼                │   │
-│  │  └───────┬────────┘  │    │  ┌─────────────────────────┐    │   │
-│  │          │           │    │  │ Skeleton-Component      │    │   │
-│  │          ▼           │    │  │ Pattern Matching        │    │   │
-│  │  ┌────────────────┐  │    │  └───────────┬─────────────┘    │   │
-│  │  │ RTL (CIRCT)    │  │    │              ▼                  │   │
-│  │  └────────────────┘  │    │         LLVM IR → Binary        │   │
-│  └──────────────────────┘    └─────────────────────────────────┘   │
-│              │                              │                       │
-│              ▼                              ▼                       │
-│  ┌──────────────────────────────────────────────────────────────┐  │
-│  │              Rocket/BOOM Core + RoCC Adapter                  │  │
-│  │  ┌─────────┐  ┌─────────────────┐  ┌───────────────────────┐ │  │
-│  │  │ L1I/D$  │  │ Burst DMA Engine│  │ Banked Scratchpad Mem │ │  │
-│  │  └─────────┘  │ (TileLink-UH)   │  │ (partition-aware)     │ │  │
-│  │               └─────────────────┘  └───────────────────────┘ │  │
-│  └──────────────────────────────────────────────────────────────┘  │
-└────────────────────────────────────────────────────────────────────┘
+```text
++------------------------------------------------------------------+
+|                      Aquas Framework (MLIR)                      |
++------------------------------------------------------------------+
+|                                                                  |
+|  CADL                              C (App)                       |
+|    |                                  |                          |
+|    v                                  v                          |
+|  +---------------------+    +--------------------------------+   |
+|  | Hardware Synthesizer|    |   Retargetable Compiler        |   |
+|  | +-----------------+ |    |  +----------+   +----------+   |   |
+|  | | aquas dialect   | |    |  |   MLIR   |<->|  e-graph |   |   |
+|  | | + affine/scf    | |    |  +-----+----+   +-----+----+   |   |
+|  | +--------+--------+ |    |        |              |        |   |
+|  |          | optimize |    |   Internal      External       |   |
+|  |          v          |    |   Rewrites      Rewrites       |   |
+|  | +-----------------+ |    |        |              |        |   |
+|  | | HECTOR (tor)    | |    |        +------+-------+        |   |
+|  | | + scheduling    | |    |               v                |   |
+|  | +--------+--------+ |    |  +------------------------+    |   |
+|  |          |          |    |  | Skeleton-Component     |    |   |
+|  |          v          |    |  | Pattern Matching       |    |   |
+|  | +-----------------+ |    |  +-----------+------------+    |   |
+|  | | RTL (CIRCT)     | |    |              v                 |   |
+|  | +-----------------+ |    |        LLVM IR -> Binary       |   |
+|  +---------------------+    +--------------------------------+   |
+|             |                             |                      |
+|             v                             v                      |
+|  +--------------------------------------------------------+     |
+|  |             Rocket/BOOM Core + RoCC Adapter            |     |
+|  |  +--------+  +----------------+  +------------------+  |     |
+|  |  | L1I/D$ |  |Burst DMA Engine|  |Banked Scratchpad |  |     |
+|  |  +--------+  | (TileLink-UH)  |  | (partition-aware)|  |     |
+|  |              +----------------+  +------------------+  |     |
+|  +--------------------------------------------------------+     |
++------------------------------------------------------------------+
 ```
 
 ## CADL with Optimization Directives
@@ -126,13 +126,13 @@ Matching engine: tag components via Egglog rules → skeleton matcher validates 
 
 ## Hardware Synthesis Flow
 
-```
-CADL ──► Pre-Opt MLIR ──► Optimize ──► Schedule ──► FIRRTL ──► Verilog
-              │              │            │
-              │   (affine    │  (modulo   └──► CIRCT
-              │    raises)   │   sched)
-              │              │
-              └── aquas dialect ops: readrf, writerf, blockload, memstore
+```text
+CADL --> Pre-Opt MLIR --> Optimize --> Schedule --> FIRRTL --> Verilog
+              |              |            |
+              |   (affine    |  (modulo   +--> CIRCT
+              |    raises)   |   sched)
+              |              |
+              +-- aquas dialect ops: readrf, writerf, blockload, memstore
 ```
 
 **Dynamic pipeline elaboration**: Each stage is a transaction with valid-ready handshakes. Loops decompose into entry/body/next transactions.

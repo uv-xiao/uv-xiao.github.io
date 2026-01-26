@@ -36,10 +36,10 @@ The standard solution of "fuse more operations" has limits. At some point, you n
 
 **Mirage Persistent Kernel (MPK)** takes the fusion idea to its logical extreme: fuse the *entire inference* into a single, persistent mega-kernel that stays resident on the GPU.
 
-```
-Traditional:  [Kernel 1] → CPU → [Kernel 2] → CPU → [Kernel 3] → ...
+```text
+Traditional:  [Kernel 1] -> CPU -> [Kernel 2] -> CPU -> [Kernel 3] -> ...
 MPK:          [=================== Mega-Kernel ===================]
-                              ↑ runs until done
+                              ^ runs until done
 ```
 
 The key insight is that kernel launch overhead isn't inherent to GPU computation - it's an artifact of the host-device programming model. By keeping the kernel alive and scheduling work *on the GPU*, MPK sidesteps this bottleneck entirely.
@@ -50,26 +50,26 @@ The key insight is that kernel launch overhead isn't inherent to GPU computation
 
 MPK introduces a **worker-scheduler model** that lives entirely on the GPU:
 
-```
-┌────────────────────────────────────────────────────────────┐
-│                   Mega-Kernel (Persistent)                  │
-│  ┌────────────────────────────────────────────────────┐    │
-│  │                  Schedulers                         │    │
-│  │    (Dedicated warps that manage work distribution)  │    │
-│  └──────────────────────┬─────────────────────────────┘    │
-│                         │                                   │
-│                         ▼                                   │
-│  ┌────────────────────────────────────────────────────┐    │
-│  │                  Task Queue                         │    │
-│  │    [Task 0] [Task 1] [Task 2] [Task 3] ...         │    │
-│  └──────────────────────┬─────────────────────────────┘    │
-│                         │                                   │
-│                         ▼                                   │
-│  ┌────────────────────────────────────────────────────┐    │
-│  │                   Workers                           │    │
-│  │  [SM 0] [SM 1] [SM 2] ... (execute actual compute) │    │
-│  └────────────────────────────────────────────────────┘    │
-└────────────────────────────────────────────────────────────┘
+```text
++--------------------------------------------------------------+
+|                  Mega-Kernel (Persistent)                    |
+|  +--------------------------------------------------------+  |
+|  |                  Schedulers                            |  |
+|  |   (Dedicated warps that manage work distribution)      |  |
+|  +------------------------+-------------------------------+  |
+|                           |                                  |
+|                           v                                  |
+|  +--------------------------------------------------------+  |
+|  |                  Task Queue                            |  |
+|  |   [Task 0] [Task 1] [Task 2] [Task 3] ...              |  |
+|  +------------------------+-------------------------------+  |
+|                           |                                  |
+|                           v                                  |
+|  +--------------------------------------------------------+  |
+|  |                   Workers                              |  |
+|  |  [SM 0] [SM 1] [SM 2] ... (execute actual compute)     |  |
+|  +--------------------------------------------------------+  |
++--------------------------------------------------------------+
 ```
 
 ### Workers and Schedulers
@@ -126,12 +126,12 @@ Rather than CUDA graphs (kernel granularity), MPK compiles at **sub-kernel granu
 
 With device-side scheduling, MPK enables **inter-layer pipelining**:
 
-```
-Time →
+```text
+Time ->
 Token 0: [RMSNorm][Attn][FFN]
 Token 1:    [RMSNorm][Attn][FFN]
 Token 2:       [RMSNorm][Attn][FFN]
-         └── GPU continuously utilized ──┘
+         +-- GPU continuously utilized --+
 ```
 
 Different tokens flow through different layers simultaneously, maximizing SM utilization.

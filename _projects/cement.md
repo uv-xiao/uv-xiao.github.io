@@ -14,24 +14,24 @@ related_papers:
 
 **Cement** is a hardware design framework comprising **CmtHDL** (an embedded HDL in Rust) and **CmtC** (a compiler with timing analysis and control synthesis). It enables productive FPGA programming while preserving cycle-deterministic behavior and timing awareness.
 
-```
-┌────────────────────────────────────────────────────────────┐
-│                    Cement Framework                         │
-├────────────────────────────────────────────────────────────┤
-│                                                             │
-│  CmtHDL (Rust)              CmtC Compiler                   │
-│  ┌──────────────┐          ┌──────────────┐                │
-│  │ RTL Layer    │          │  ir-rs       │                │
-│  │ (ports,wires)│  ─────►  │  (SSA IR)    │                │
-│  ├──────────────┤          ├──────────────┤                │
-│  │ Event Layer  │          │  Timing      │                │
-│  │ (occurrence) │  ─────►  │  Analysis    │                │
-│  ├──────────────┤          ├──────────────┤                │
-│  │ Ctrl Sub-lang│          │  Control     │                │
-│  │ seq/par/if/  │  ─────►  │  Synthesis   │  ──► Verilog   │
-│  │ for/while    │          │  (State Tree)│                │
-│  └──────────────┘          └──────────────┘                │
-└────────────────────────────────────────────────────────────┘
+```text
++----------------------------------------------------------+
+|                    Cement Framework                      |
++----------------------------------------------------------+
+|                                                          |
+|  CmtHDL (Rust)              CmtC Compiler                |
+|  +--------------+          +--------------+              |
+|  | RTL Layer    |          |  ir-rs       |              |
+|  | (ports,wires)|  ----->  |  (SSA IR)    |              |
+|  +--------------+          +--------------+              |
+|  | Event Layer  |          |  Timing      |              |
+|  | (occurrence) |  ----->  |  Analysis    |              |
+|  +--------------+          +--------------+              |
+|  | Ctrl Sub-lang|          |  Control     |              |
+|  | seq/par/if/  |  ----->  |  Synthesis   |  --> Verilog |
+|  | for/while    |          |  (State Tree)|              |
+|  +--------------+          +--------------+              |
++----------------------------------------------------------+
 ```
 
 ## The FPGA Programming Gap

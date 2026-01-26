@@ -11,34 +11,34 @@ related_papers:
 
 **Cayman** is the first end-to-end framework that synthesizes high-performance custom accelerators with full control flow and data access support, automating both candidate selection and hardware synthesis.
 
-```
-┌────────────────────────────────────────────────────────────────┐
-│                      Cayman Framework                           │
-├────────────────────────────────────────────────────────────────┤
-│                                                                 │
-│   Application ──► LLVM IR ──┬──► profile/analyze                │
-│                             │                                   │
-│                             └──► build wPST                     │
-│                                     │                           │
-│   ┌─────────────────────────────────▼─────────────────────────┐│
-│   │              Candidate Selection (DP)                      ││
-│   │  ┌─────────┐   ┌─────────────┐   ┌──────────────────────┐ ││
-│   │  │  wPST   │──►│ Accelerator │──►│ Pareto-optimal       │ ││
-│   │  │traversal│   │   Model     │   │ Solutions            │ ││
-│   │  └─────────┘   │ • Ctrl-flow │   │ (speedup vs area)    │ ││
-│   │                │ • Interface │   └──────────────────────┘ ││
-│   │                └─────────────┘                             ││
-│   └────────────────────────────────────────────────────────────┘│
-│                             │                                   │
-│                             ▼                                   │
-│   ┌─────────────────────────────────────────────────────────┐  │
-│   │              Accelerator Merging                         │  │
-│   │   DFG₁ + DFG₂ ──► Reconfigurable Datapath + FSMs        │  │
-│   └─────────────────────────────────────────────────────────┘  │
-│                             │                                   │
-│                             ▼                                   │
-│                      Hardware (Verilog)                         │
-└────────────────────────────────────────────────────────────────┘
+```text
++------------------------------------------------------------------+
+|                        Cayman Framework                          |
++------------------------------------------------------------------+
+|                                                                  |
+|  Application --> LLVM IR --+--> profile/analyze                  |
+|                            |                                     |
+|                            +--> build wPST                       |
+|                                    |                             |
+|  +---------------------------------v---------------------------+ |
+|  |             Candidate Selection (DP)                        | |
+|  |  +---------+   +------------+   +-------------------------+ | |
+|  |  |  wPST   |-->| Accelerator|-->| Pareto-optimal          | | |
+|  |  |traversal|   |   Model    |   | Solutions               | | |
+|  |  +---------+   | - Ctrl-flow|   | (speedup vs area)       | | |
+|  |                | - Interface|   +-------------------------+ | |
+|  |                +------------+                               | |
+|  +-------------------------------------------------------------+ |
+|                            |                                     |
+|                            v                                     |
+|  +-------------------------------------------------------------+ |
+|  |             Accelerator Merging                             | |
+|  |  DFG1 + DFG2 --> Reconfigurable Datapath + FSMs             | |
+|  +-------------------------------------------------------------+ |
+|                            |                                     |
+|                            v                                     |
+|                     Hardware (Verilog)                           |
++------------------------------------------------------------------+
 ```
 
 ## Limitations of Prior Work
@@ -119,23 +119,23 @@ def DP(vertex v):
 
 Cayman enables reusable accelerators across kernels with diverse control flows:
 
-```
-┌─────────────────────────────────────────────────────┐
-│        Merged Accelerator                            │
-│  ┌────────────────────────────────────────────────┐ │
-│  │ Reconfigurable Datapath (from DFG₁ ∪ DFG₂)     │ │
-│  │  LD ──► MUL ──► ADD ──► ST                     │ │
-│  │   ↑              ↑                              │ │
-│  │  MUX            MUX  ◄── configBits            │ │
-│  └────────────────────────────────────────────────┘ │
-│       ↑ ctrlSignals                                  │
-│  ┌────┴────┐                                        │
-│  │  Ctrl   │◄── select                              │
-│  └────┬────┘                                        │
-│    ┌──┴──┐                                          │
-│ FSM₁   FSM₂  (standalone FSMs for each kernel)     │
-│ linear  dot-prod                                    │
-└─────────────────────────────────────────────────────┘
+```text
++-------------------------------------------------------+
+|       Merged Accelerator                              |
+|  +-------------------------------------------------+  |
+|  | Reconfigurable Datapath (from DFG1 U DFG2)      |  |
+|  |  LD --> MUL --> ADD --> ST                      |  |
+|  |   ^              ^                              |  |
+|  |  MUX            MUX  <-- configBits             |  |
+|  +-------------------------------------------------+  |
+|       ^ ctrlSignals                                   |
+|  +----+----+                                          |
+|  |  Ctrl   |<-- select                                |
+|  +----+----+                                          |
+|    +--+--+                                            |
+| FSM1   FSM2  (standalone FSMs for each kernel)        |
+| linear  dot-prod                                      |
++-------------------------------------------------------+
 ```
 
 **Key insight**: Basic blocks with FP ops and data access dominate area; control FSMs are cheap. Merge datapaths, keep separate FSMs.

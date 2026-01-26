@@ -12,39 +12,39 @@ related_papers:
 
 **Hector** is a two-level IR for hardware synthesis built on MLIR, providing a unified representation for HLS (static, dynamic, hybrid scheduling) and hardware generators.
 
-```
-┌──────────────────────────────────────────────────────────────┐
-│                    Hector Two-Level IR                        │
-├──────────────────────────────────────────────────────────────┤
-│                                                               │
-│   SCF/Affine (MLIR)                                           │
-│        │                                                      │
-│        ▼                                                      │
-│   ┌────────────────────────────────────────────────────────┐ │
-│   │  ToR IR (TOpological Representation)                    │ │
-│   │  ┌──────────────┐    ┌──────────────────────────────┐  │ │
-│   │  │ Time Graph   │    │  tor.for %i = %c0 to %c10    │  │ │
-│   │  │  0─►1─►2─►3  │    │    %x = tor.load on (0 to 1) │  │ │
-│   │  │    └─►4─┘    │    │    %y = tor.mulf on (1 to 3) │  │ │
-│   │  │  (topology)  │    │  } on (0 to 4)               │  │ │
-│   │  └──────────────┘    └──────────────────────────────┘  │ │
-│   │  Scheduling: static | pipeline | dynamic | hybrid       │ │
-│   └────────────────────────────────────────────────────────┘ │
-│        │ Time Graph Transform + Lowering                     │
-│        ▼                                                      │
-│   ┌────────────────────────────────────────────────────────┐ │
-│   │  HEC IR (Hierarchical Elastic Component)                │ │
-│   │  ┌──────────┐  ┌──────────┐  ┌──────────┐              │ │
-│   │  │STG-style │  │Pipeline  │  │Handshake │              │ │
-│   │  │(stateset)│  │(stageset)│  │(graph)   │              │ │
-│   │  │ @s0→@s1  │  │ stg0→stg1│  │fork,merge│              │ │
-│   │  └──────────┘  └──────────┘  └──────────┘              │ │
-│   │  Allocate-assign: explicit resources + signal routing   │ │
-│   └────────────────────────────────────────────────────────┘ │
-│        │ RTL Generation                                      │
-│        ▼                                                      │
-│   Chisel ──► Verilog                                          │
-└──────────────────────────────────────────────────────────────┘
+```text
++------------------------------------------------------------+
+|                   Hector Two-Level IR                      |
++------------------------------------------------------------+
+|                                                            |
+|  SCF/Affine (MLIR)                                         |
+|       |                                                    |
+|       v                                                    |
+|  +------------------------------------------------------+  |
+|  |  ToR IR (TOpological Representation)                 |  |
+|  |  +-------------+   +-----------------------------+   |  |
+|  |  | Time Graph  |   | tor.for %i = %c0 to %c10    |   |  |
+|  |  |  0->1->2->3 |   |   %x = tor.load on (0 to 1) |   |  |
+|  |  |    +->4-+   |   |   %y = tor.mulf on (1 to 3) |   |  |
+|  |  |  (topology) |   | } on (0 to 4)               |   |  |
+|  |  +-------------+   +-----------------------------+   |  |
+|  |  Scheduling: static | pipeline | dynamic | hybrid    |  |
+|  +------------------------------------------------------+  |
+|       | Time Graph Transform + Lowering                    |
+|       v                                                    |
+|  +------------------------------------------------------+  |
+|  |  HEC IR (Hierarchical Elastic Component)             |  |
+|  |  +----------+  +----------+  +----------+            |  |
+|  |  |STG-style |  |Pipeline  |  |Handshake |            |  |
+|  |  |(stateset)|  |(stageset)|  |(graph)   |            |  |
+|  |  | @s0->@s1 |  | stg0->stg1| |fork,merge|            |  |
+|  |  +----------+  +----------+  +----------+            |  |
+|  |  Allocate-assign: explicit resources + signal routing|  |
+|  +------------------------------------------------------+  |
+|       | RTL Generation                                     |
+|       v                                                    |
+|  Chisel --> Verilog                                        |
++------------------------------------------------------------+
 ```
 
 ## Why Two Levels?

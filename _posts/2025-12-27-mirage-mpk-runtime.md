@@ -27,18 +27,18 @@ This post continues our exploration of [Mirage](https://github.com/mirage-projec
 
 Traditional CUDA programming launches separate kernels for each operation. Mirage's megakernel takes a radically different approach: **launch once, run forever**.
 
-```
+```text
 Traditional Model:
-┌────────┐     ┌────────┐     ┌────────┐
-│Kernel 1│→CPU→│Kernel 2│→CPU→│Kernel 3│→ ...
-└────────┘     └────────┘     └────────┘
-   5-10μs latency each launch
++--------+     +--------+     +--------+
+|Kernel 1|->CPU|Kernel 2|->CPU|Kernel 3|-> ...
++--------+     +--------+     +--------+
+   5-10us latency each launch
 
 Megakernel Model:
-┌─────────────────────────────────────────┐
-│        Mega-Kernel (Persistent)          │
-│   Runs until all tasks complete          │
-└─────────────────────────────────────────┘
++-----------------------------------------+
+|        Mega-Kernel (Persistent)         |
+|   Runs until all tasks complete         |
++-----------------------------------------+
    Single launch, amortized overhead
 ```
 
@@ -48,31 +48,31 @@ The megakernel contains all the fused operations from the transpiler, plus a sch
 
 ## 2. Architecture Overview
 
-```
-┌─────────────────────────────────────────────────────────────────────────┐
-│                           Host (Python API)                             │
-│  ┌────────────────┐  ┌────────────────┐  ┌────────────────────────┐    │
-│  │ Kernel Graph   │  │ Threadblock    │  │ Task Graph Compiler    │    │
-│  │ (KGraph)       │──│ Graph (TBGraph)│──│ Fusion & Scheduling    │    │
-│  └────────────────┘  └────────────────┘  └────────────────────────┘    │
-└─────────────────────────────────────────────────────────────────────────┘
-                                │
-                                ▼ Launch once
-┌─────────────────────────────────────────────────────────────────────────┐
-│                         GPU Megakernel                                  │
-│                                                                         │
-│  ┌───────────┐ ┌───────────┐ ┌───────────┐    ┌───────────────────┐   │
-│  │ Worker 0  │ │ Worker 1  │ │ Worker 2  │    │ Scheduler SMs     │   │
-│  │    SM     │ │    SM     │ │    SM     │    │ ┌─────┐ ┌─────┐  │   │
-│  │  ┌─────┐  │ │  ┌─────┐  │ │  ┌─────┐  │◄───│ │Sch0 │ │Sch1 │  │   │
-│  │  │Task │  │ │  │Task │  │ │  │Task │  │    │ └──┬──┘ └──┬──┘  │   │
-│  │  │Queue│  │ │  │Queue│  │ │  │Queue│  │    │    │       │     │   │
-│  │  └─────┘  │ │  └─────┘  │ │  └─────┘  │    │  Event    Event  │   │
-│  └───────────┘ └───────────┘ └───────────┘    │  Queues   Queues │   │
-│       │              │              │         └───────────────────┘   │
-│       └──────────────┴──────────────┴──────────────────┘              │
-│                     Event Counter Array                                │
-└─────────────────────────────────────────────────────────────────────────┘
+```text
++-----------------------------------------------------------------------+
+|                          Host (Python API)                            |
+|  +---------------+  +---------------+  +-----------------------+      |
+|  | Kernel Graph  |  | Threadblock   |  | Task Graph Compiler   |      |
+|  | (KGraph)      |--|Graph (TBGraph)|--| Fusion & Scheduling   |      |
+|  +---------------+  +---------------+  +-----------------------+      |
++-----------------------------------------------------------------------+
+                               |
+                               v Launch once
++-----------------------------------------------------------------------+
+|                        GPU Megakernel                                 |
+|                                                                       |
+|  +----------+ +----------+ +----------+    +---------------------+    |
+|  | Worker 0 | | Worker 1 | | Worker 2 |    | Scheduler SMs       |    |
+|  |    SM    | |    SM    | |    SM    |    | +-----+ +-----+     |    |
+|  |  +----+  | |  +----+  | |  +----+  |<---| |Sch0 | |Sch1 |     |    |
+|  |  |Task|  | |  |Task|  | |  |Task|  |    | +--+--+ +--+--+     |    |
+|  |  |Que |  | |  |Que |  | |  |Que |  |    |    |       |        |    |
+|  |  +----+  | |  +----+  | |  +----+  |    |  Event    Event     |    |
+|  +----------+ +----------+ +----------+    |  Queues   Queues    |    |
+|       |             |             |        +---------------------+    |
+|       +-------------+-------------+----------------------+            |
+|                    Event Counter Array                                |
++-----------------------------------------------------------------------+
 ```
 
 The GPU is partitioned into:
@@ -282,41 +282,41 @@ __device__ __forceinline__ void execute_scheduler(RuntimeConfig config, int offs
 ### Scheduler Execution Flow
 
 ```text
-┌─────────────────────────────────────────────────────────────────────────┐
-│                    Scheduler Main Loop                                  │
-│                                                                         │
-│  ┌─────────────────────────────────────────────────────────────────┐   │
-│  │  1. Poll Event Queues (round-robin local + global)              │   │
-│  │     └─ ld_acquire_gpu_u64(&sched_queue_last_ready_event_id)     │   │
-│  └─────────────────────────────────────────────────────────────────┘   │
-│                               │                                         │
-│                               ▼                                         │
-│  ┌─────────────────────────────────────────────────────────────────┐   │
-│  │  2. Fetch Event from Queue                                      │   │
-│  │     └─ ld_relaxed_gpu_u64(&sched_queues[queue_idx][pos])        │   │
-│  └─────────────────────────────────────────────────────────────────┘   │
-│                               │                                         │
-│                               ▼                                         │
-│  ┌─────────────────────────────────────────────────────────────────┐   │
-│  │  3. Process Event by Type                                       │   │
-│  │                                                                 │   │
-│  │     EVENT_TERMINATE                                             │   │
-│  │       └─ Send TASK_TERMINATE to all workers → return            │   │
-│  │                                                                 │   │
-│  │     EVENT_END_OF_TASK_GRAPH                                     │   │
-│  │       └─ prepare_next_batch() → launch begin_task_graph         │   │
-│  │                                                                 │   │
-│  │     EVENT_LAUNCH_MASSIVE_TASKS                                  │   │
-│  │       └─ Split tasks across schedulers → round-robin to workers │   │
-│  └─────────────────────────────────────────────────────────────────┘   │
-│                               │                                         │
-│                               ▼                                         │
-│  ┌─────────────────────────────────────────────────────────────────┐   │
-│  │  4. Dispatch Tasks to Workers (round-robin)                     │   │
-│  │     ├─ st_relaxed_gpu_u64(&worker_queues[worker_id][pos], task) │   │
-│  │     └─ atom_add_release_gpu_u64(&last_ready_task_id[w], 1)      │   │
-│  └─────────────────────────────────────────────────────────────────┘   │
-└─────────────────────────────────────────────────────────────────────────┘
++-----------------------------------------------------------------------+
+|                   Scheduler Main Loop                                 |
+|                                                                       |
+|  +------------------------------------------------------------------+ |
+|  |  1. Poll Event Queues (round-robin local + global)               | |
+|  |     +- ld_acquire_gpu_u64(&sched_queue_last_ready_event_id)      | |
+|  +------------------------------------------------------------------+ |
+|                              |                                        |
+|                              v                                        |
+|  +------------------------------------------------------------------+ |
+|  |  2. Fetch Event from Queue                                       | |
+|  |     +- ld_relaxed_gpu_u64(&sched_queues[queue_idx][pos])         | |
+|  +------------------------------------------------------------------+ |
+|                              |                                        |
+|                              v                                        |
+|  +------------------------------------------------------------------+ |
+|  |  3. Process Event by Type                                        | |
+|  |                                                                  | |
+|  |     EVENT_TERMINATE                                              | |
+|  |       +- Send TASK_TERMINATE to all workers -> return            | |
+|  |                                                                  | |
+|  |     EVENT_END_OF_TASK_GRAPH                                      | |
+|  |       +- prepare_next_batch() -> launch begin_task_graph         | |
+|  |                                                                  | |
+|  |     EVENT_LAUNCH_MASSIVE_TASKS                                   | |
+|  |       +- Split tasks across schedulers -> round-robin to workers | |
+|  +------------------------------------------------------------------+ |
+|                              |                                        |
+|                              v                                        |
+|  +------------------------------------------------------------------+ |
+|  |  4. Dispatch Tasks to Workers (round-robin)                      | |
+|  |     +- st_relaxed_gpu_u64(&worker_queues[worker_id][pos], task)  | |
+|  |     +- atom_add_release_gpu_u64(&last_ready_task_id[w], 1)       | |
+|  +------------------------------------------------------------------+ |
++-----------------------------------------------------------------------+
 ```
 
 ### Event Types
@@ -382,24 +382,24 @@ For multi-GPU inference, MPK leverages **NVSHMEM symmetric heap** for zero-copy 
 
 ### Architecture
 
-```
-GPU 0                                         GPU 1
-┌───────────────────────────────────────┐    ┌───────────────────────────────────────┐
-│  Workers                              │    │  Workers                              │
-│  ┌─────────────────────────────────┐  │    │  ┌─────────────────────────────────┐  │
-│  │ Worker 0                        │  │    │  │ Worker 0                        │  │
-│  │  - Local Queue [0]              │  │    │  │  - Local Queue [0]              │  │
-│  │  - Remote Queue [num_workers]   │  │    │  │  - Remote Queue [num_workers]   │  │
-│  └─────────────────────────────────┘  │    │  └─────────────────────────────────┘  │
-│                                       │    │                                       │
-│  TASK_NVSHMEM_COPY transfers data ────┼────┼──► Data + signal arrive together     │
-│  via nvshmem_putmem_signal()          │    │                                       │
-└───────────────────────────────────────┘    └───────────────────────────────────────┘
-                    │                                        │
-                    └────────────────┬───────────────────────┘
-                                     │
-                           NVSHMEM Symmetric Heap
-              (queues, event counters, data - same address on all GPUs)
+```text
+GPU 0                                        GPU 1
++--------------------------------------+    +--------------------------------------+
+|  Workers                             |    |  Workers                             |
+|  +--------------------------------+  |    |  +--------------------------------+  |
+|  | Worker 0                       |  |    |  | Worker 0                       |  |
+|  |  - Local Queue [0]             |  |    |  |  - Local Queue [0]             |  |
+|  |  - Remote Queue [num_workers]  |  |    |  |  - Remote Queue [num_workers]  |  |
+|  +--------------------------------+  |    |  +--------------------------------+  |
+|                                      |    |                                      |
+|  TASK_NVSHMEM_COPY transfers data ---+----+--> Data + signal arrive together    |
+|  via nvshmem_putmem_signal()         |    |                                      |
++--------------------------------------+    +--------------------------------------+
+                   |                                       |
+                   +---------------+-----------------------+
+                                   |
+                         NVSHMEM Symmetric Heap
+            (queues, event counters, data - same address on all GPUs)
 ```
 
 ### Symmetric Heap Allocation
@@ -452,18 +452,18 @@ nvshmem_signal_wait_until(
 
 ### Cross-GPU Communication Flow
 
-```
+```text
 GPU 0 Worker                          GPU 1 Worker
-     │                                      │
-     │ Execute TASK_NVSHMEM_COPY            │ Waiting on nvshmem_signal_wait_until()
-     │     │                                │         │
-     │     ├─► nvshmem_putmem_signal() ─────┼────────►│
-     │     │   (data + signal atomically)   │         │
-     │     │                                │    Event counter incremented
-     │                                      │         │
-     │                                      │    ◄────┘ Wait satisfied
-     │                                      │
-     │                                      │ Execute dependent task
+     |                                      |
+     | Execute TASK_NVSHMEM_COPY            | Waiting on nvshmem_signal_wait_until()
+     |     |                                |         |
+     |     +-> nvshmem_putmem_signal() -----+-------->|
+     |     |   (data + signal atomically)   |         |
+     |     |                                |    Event counter incremented
+     |                                      |         |
+     |                                      |    <----+ Wait satisfied
+     |                                      |
+     |                                      | Execute dependent task
 ```
 
 ---
@@ -472,23 +472,23 @@ GPU 0 Worker                          GPU 1 Worker
 
 Megakernel tasks are **hand-written CUDA templates**, not generated code. The transpiler only extracts shape parameters to instantiate these templates.
 
-```
+```text
 Two Separate Systems in Mirage:
 
-┌─────────────────────────────────────────────────────────────────────────┐
-│  TBGraph / STensor (Transpiler Path)                                    │
-│  - Used for STANDALONE kernel code generation                           │
-│  - NOT used by megakernel runtime                                       │
-└─────────────────────────────────────────────────────────────────────────┘
-                              │
-                              │ Extract shapes only
-                              ▼
-┌─────────────────────────────────────────────────────────────────────────┐
-│  Megakernel Tasks (Runtime Path)                                        │
-│  - Hand-written CUDA templates in tasks/ampere/*.cuh, tasks/hopper/*.cuh│
-│  - TaskRegister instantiates templates with extracted dimensions        │
-│  - Executed by worker SMs at runtime                                    │
-└─────────────────────────────────────────────────────────────────────────┘
++-----------------------------------------------------------------------+
+|  TBGraph / STensor (Transpiler Path)                                  |
+|  - Used for STANDALONE kernel code generation                         |
+|  - NOT used by megakernel runtime                                     |
++-----------------------------------------------------------------------+
+                             |
+                             | Extract shapes only
+                             v
++-----------------------------------------------------------------------+
+|  Megakernel Tasks (Runtime Path)                                      |
+|  - Hand-written CUDA templates in tasks/ampere/*.cuh, hopper/*.cuh    |
+|  - TaskRegister instantiates templates with extracted dimensions      |
+|  - Executed by worker SMs at runtime                                  |
++-----------------------------------------------------------------------+
 ```
 
 ### Example: Linear Layer
@@ -551,11 +551,11 @@ int TaskRegister::register_rmsnorm_task(threadblock::Graph const &bgraph,
 
 ### Architecture-Specific Implementations
 
-```
+```text
 persistent_kernel/tasks/
-├── ampere/      # SM80: CP.ASYNC-based loading
-├── hopper/      # SM90: TMA-based loading
-└── blackwell/   # SM100: New tensor core operations
++-- ampere/      # SM80: CP.ASYNC-based loading
++-- hopper/      # SM90: TMA-based loading
++-- blackwell/   # SM100: New tensor core operations
 ```
 
 ---
@@ -564,33 +564,33 @@ persistent_kernel/tasks/
 
 The communication flow between workers and schedulers forms a closed loop:
 
-```
-┌─────────────────────────────────────────────────────────────────────────┐
-│               Worker-Scheduler Communication Architecture               │
-│                                                                         │
-│  Schedulers                              Workers                        │
-│  ┌────────────┐                         ┌────────────┐                 │
-│  │ Scheduler 0│──────────────────────────│ Worker 0  │                 │
-│  │            │                    ┌────│ Worker 1  │                 │
-│  └────────────┘                    │    │ Worker 2  │                 │
-│                                    │    └────────────┘                 │
-│  ┌────────────┐                    │                                   │
-│  │ Scheduler 1│────────────────────┼────│ Worker 3  │                 │
-│  │            │              ┌─────┼────│ Worker 4  │                 │
-│  └────────────┘              │     │    │ Worker 5  │                 │
-│                              │     │    └────────────┘                 │
-│         ▲                    │     │          │                        │
-│         │                    │     │          │                        │
-│    Event Queues         Worker Queues   Event Counters                 │
-│   (sched_queues)       (worker_queues)  (all_event_counters)           │
-│                              │     │          │                        │
-│         │                    │     │          ▼                        │
-│    ┌────┴────┐          ┌────┴─────┴────┐                              │
-│    │ Workers │          │  Schedulers   │                              │
-│    │ trigger │──────────│  dispatch     │                              │
-│    │ events  │          │  tasks        │                              │
-│    └─────────┘          └───────────────┘                              │
-└─────────────────────────────────────────────────────────────────────────┘
+```text
++-----------------------------------------------------------------------+
+|              Worker-Scheduler Communication Architecture              |
+|                                                                       |
+|  Schedulers                              Workers                      |
+|  +------------+                         +------------+                |
+|  | Scheduler 0|-------------------------| Worker 0  |                |
+|  |            |                    +----| Worker 1  |                |
+|  +------------+                    |    | Worker 2  |                |
+|                                    |    +------------+                |
+|  +------------+                    |                                  |
+|  | Scheduler 1|--------------------+----| Worker 3  |                |
+|  |            |              +-----+----| Worker 4  |                |
+|  +------------+              |     |    | Worker 5  |                |
+|                              |     |    +------------+                |
+|         ^                    |     |          |                       |
+|         |                    |     |          |                       |
+|    Event Queues         Worker Queues   Event Counters                |
+|   (sched_queues)       (worker_queues)  (all_event_counters)          |
+|                              |     |          |                       |
+|         |                    |     |          v                       |
+|    +----+----+          +----+-----+----+                             |
+|    | Workers |          |  Schedulers   |                             |
+|    | trigger |----------|  dispatch     |                             |
+|    | events  |          |  tasks        |                             |
+|    +---------+          +---------------+                             |
++-----------------------------------------------------------------------+
 
 Communication Flow:
 1. Worker completes task → increments event counter
