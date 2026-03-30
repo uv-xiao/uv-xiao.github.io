@@ -46,7 +46,7 @@
   type: time_table
   contents:
     - title: "ISAMORE: Finding Reusable Instructions via E-Graph Anti-Unification"
-      institution: ASPLOS 2026
+      institution: ASPLOS 2026 (Best Paper Award, 5/1048)
       year: 2026
       description:
         - "Youwei Xiao, Chenyun Yin, Yitian Sun, Yun Liang"
@@ -79,6 +79,9 @@
 - title: Honors and Awards
   type: time_table
   contents:
+    - title: ASPLOS 2026 Best Paper Award
+      institution: "\"Finding Reusable Instructions via E-Graph Anti-Unification\" (ISAMORE), recognized with ASPLOS 2026 Best Paper Award (5/1048)"
+      year: March 2026
     - title: Yang Fuqing & Wang Yangyuan Academician Scholarship
       institution: Awarded to only 5 students at EECS, Peking University, for academic excellence
       year: 2018-2019
@@ -116,6 +119,62 @@
     - title: "AHS: An EDA toolbox for Agile Chip Front-end Design"
       institution: ASP-DAC 2025, Tokyo, Japan
       year: January 2025
+
+- title: Selected Projects
+  type: time_table
+  contents:
+    - title: ISAMORE
+      institution: Reusable instruction discovery with e-graph anti-unification
+      year: 2025 - Present
+      description:
+        - "End-to-end framework for discovering reusable custom instructions from domain applications."
+        - "Recognized with the ASPLOS 2026 Best Paper Award."
+    - title: APS / Aquas
+      institution: MLIR-based hardware-software co-design framework for agile processor specialization
+      year: 2024 - Present
+      description:
+        - "Initiated and led the project toward a fully integrated co-design toolchain."
+        - "Combines hardware synthesis, retargetable compilation, and custom instruction adoption."
+    - title: Cayman
+      institution: Automatic accelerator generation with control-flow and data-access optimization
+      year: 2024 - 2025
+      description:
+        - "Built an end-to-end framework for accelerator candidate selection and synthesis."
+    - title: SkyEgg
+      institution: Joint implementation selection and scheduling using e-graphs
+      year: 2024 - 2025
+      description:
+        - "Explores e-graph-based optimization for hardware synthesis implementation choices."
+    - title: Cement
+      institution: Cycle-deterministic embedded HDL and compiler framework in Rust
+      year: 2023 - 2024
+      description:
+        - "Developed productive FPGA design abstractions with timing-aware control synthesis."
+    - title: Hector
+      institution: Multi-level intermediate representation for hardware synthesis on MLIR
+      year: 2021 - 2022
+      description:
+        - "Built a unified two-level IR infrastructure for HLS and hardware generators."
+    - title: Retargetable Tensor Compilers and Superoptimizers
+      institution: Ongoing work targeting NVIDIA, Qualcomm Hexagon, and Huawei Ascend
+      year: 2025 - Present
+      description:
+        - "Developing compiler infrastructure and superoptimization techniques across heterogeneous accelerators."
+    - title: PTO Runtime
+      institution: Distributed tensor compilation and runtime system
+      year: 2025 - Present
+      description:
+        - "Contributing to distributed tensor compilation and runtime support for large-scale workloads."
+    - title: EggMind
+      institution: Agentic superoptimizer with LLM-driven equality saturation
+      year: 2025 - Present
+      description:
+        - "Investigating agentic optimization workflows that combine LLMs with equality saturation."
+    - title: Multi-Agent Inference Infrastructure
+      institution: Programming surface and control layers for multi-agent systems
+      year: 2025 - Present
+      description:
+        - "Exploring system infrastructure for multi-agent inference and orchestration."
 
 - title: Teaching Experience
   type: time_table
