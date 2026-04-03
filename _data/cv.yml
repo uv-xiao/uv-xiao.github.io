@@ -28,17 +28,17 @@
   contents:
     - title: Hardware Synthesis & EDA
       items:
-        - Domain-specific languages for hardware description
+        - Compiler infrastructures and domain-specific languages for hardware synthesis (Hector, Cement, SkyEgg)
         - Multi-level intermediate representations for HLS
         - E-graph based optimization for hardware synthesis
     - title: Computer Architecture
       items:
-        - Automated accelerator generation
+        - Compiler-guided accelerator generation and instruction specialization (Cayman, ISAMORE, APS)
         - Custom instruction design and reuse
         - Hardware-software co-design frameworks
     - title: ML Compilers & Systems
       items:
-        - Tensor compiler optimization
+        - Retargetable tensor compilers, execution runtimes, and superoptimizers (HTP, PTO Runtime, EggMind, Hive)
         - Distributed and mega-kernel compilation
         - LLM inference optimization
 
@@ -155,26 +155,26 @@
       year: 2021 - 2022
       description:
         - "Built a unified two-level IR infrastructure for HLS and hardware generators."
-    - title: Retargetable Tensor Compilers and Superoptimizers
-      institution: Ongoing work targeting NVIDIA, Qualcomm Hexagon, and Huawei Ascend
+    - title: HTP
+      institution: Human- and LLM-friendly retargetable compiler substrate with inspectable IRs
       year: 2025 - Present
       description:
-        - "Developing compiler infrastructure and superoptimization techniques across heterogeneous accelerators."
+        - "Builds interpretable compiler artifacts for heterogeneous tensor programs across NVIDIA, Qualcomm Hexagon, and Huawei Ascend."
     - title: PTO Runtime
-      institution: Distributed tensor compilation and runtime system
+      institution: Task-graph runtime for distributed tensor compilation and host-device execution
       year: 2025 - Present
       description:
-        - "Contributing to distributed tensor compilation and runtime support for large-scale workloads."
+        - "Turns compiled dependency graphs into structured host-device execution for large-scale tensor workloads."
     - title: EggMind
-      institution: Agentic superoptimizer with LLM-driven equality saturation
+      institution: Execution-guided agentic superoptimizer for scalable equality saturation
       year: 2025 - Present
       description:
-        - "Investigating agentic optimization workflows that combine LLMs with equality saturation."
-    - title: Multi-Agent Inference Infrastructure
-      institution: Programming surface and control layers for multi-agent systems
+        - "Uses bounded search with diagnosis and execution feedback to discover better rewrite strategies."
+    - title: Hive
+      institution: Explicit orchestration substrate for programmable multi-agent systems
       year: 2025 - Present
       description:
-        - "Exploring system infrastructure for multi-agent inference and orchestration."
+        - "Separates workflow control, state transitions, and serving boundaries for programmable multi-agent execution."
 
 - title: Teaching Experience
   type: time_table
