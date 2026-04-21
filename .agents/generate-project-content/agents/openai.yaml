@@ -1,0 +1,4 @@
+interface:
+  display_name: "Generate Project Content"
+  short_description: "Write rich project pages from source artifacts"
+  default_prompt: "Use $generate-project-content to draft a strong project page from this paper or repository."

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Write Reading Notes"
+  short_description: "Create paper and repository reading notes"
+  default_prompt: "Use $write-reading-notes to create concise reading notes for this paper or repository."

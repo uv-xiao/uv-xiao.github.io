@@ -1,0 +1,4 @@
+interface:
+  display_name: "Update Academic Website"
+  short_description: "Keep papers, projects, and CVs consistent"
+  default_prompt: "Use $update-academic-website to add this paper or project consistently across the website and CV."

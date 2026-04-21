@@ -1,0 +1,4 @@
+interface:
+  display_name: "Debug Website Deploy"
+  short_description: "Build, serve, deploy, and debug the site"
+  default_prompt: "Use $debug-website-deploy to debug this website build, serve, or deployment problem."
