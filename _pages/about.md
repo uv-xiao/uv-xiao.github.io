@@ -29,8 +29,8 @@ With my research experiences spanning hardware synthesis and computer architectu
 
 Based on my accumulated skills in compilers, DSLs, and architecture, I am actively exploring interesting topics in ML compilers and systems. Currently, I am actively researching or contributing to:
 
-1. [Retargetable tensor compilers](https://github.com/uv-xiao/htp) and superoptimizers, targeting NVIDIA (Ampere, Hopper, Blackwell), QualComm Hexagon, and Huawei Ascend architectures.
+1. [IntelliC](https://github.com/uv-xiao/IntelliC), a human- and LLM-friendly intelligent compiler infrastructure for retargetable tensor compilation and superoptimization, targeting NVIDIA (Ampere, Hopper, Blackwell), QualComm Hexagon, and Huawei Ascend architectures.
 2. Distributed tensor compilation and runtime, especially [PTO Runtime](https://github.com/hw-native-sys/simpler).
-3. Agentic superoptimizers ([EggMind](https://openreview.net/forum?id=5jY9ryobP7)) with LLM-driven equality saturation.
+3. Agentic superoptimizers ([EggMind](https://arxiv.org/abs/2604.17364)) with LLM-guided strategy synthesis for equality saturation.
 4. Agentic hardware-software co-design toolchain: the next-generation APS!
-5. Inference infrastructure for multi-agent system with programming surface and control layers.
+5. Inference infrastructure for multi-agent systems ([Hive](https://arxiv.org/abs/2604.17353)) with programming surface and control layers.
