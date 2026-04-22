@@ -1,4 +1,516 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en"><generator uri="https://jekyllrb.com/" version="4.3.4">Jekyll</generator><link href="https://uv-xiao.github.io/feed.xml" rel="self" type="application/atom+xml"/><link href="https://uv-xiao.github.io/" rel="alternate" type="text/html" hreflang="en"/><updated>2026-04-21T04:38:26+00:00</updated><id>https://uv-xiao.github.io/feed.xml</id><title type="html">Youwei Xiao</title><subtitle>Ph.D. candidate at Peking University. Research on compilers, DSLs, and hardware-software co-design for MLSys and EDA. </subtitle><entry><title type="html">Inside Mirage (3) - Megakernel Persistent Runtime</title><link href="https://uv-xiao.github.io/blog/2025/mirage-mpk-runtime/" rel="alternate" type="text/html" title="Inside Mirage (3) - Megakernel Persistent Runtime"/><published>2025-12-27T00:00:00+00:00</published><updated>2025-12-27T00:00:00+00:00</updated><id>https://uv-xiao.github.io/blog/2025/mirage-mpk-runtime</id><content type="html" xml:base="https://uv-xiao.github.io/blog/2025/mirage-mpk-runtime/"><![CDATA[<p>This post continues our exploration of <a href="https://github.com/mirage-project/mirage">Mirage</a>, diving into the <strong>Megakernel Persistent Kernel (MPK)</strong> runtime that powers high-performance LLM inference. If the <a href="/blog/2025/mirage-transpiler-cuda/">previous post on the transpiler</a> showed you <em>what</em> code gets generated, this post shows you <em>how</em> that code executes.</p> <blockquote> <p><strong>Related reading:</strong> Check out my <a href="/blog/2025/mirage-mpk-paper/">MPK paper summary</a> for the high-level ideas behind this architecture.</p> </blockquote> <hr/> <h2 id="1-the-megakernel-execution-model">1. The Megakernel Execution Model</h2> <p>Traditional CUDA programming launches separate kernels for each operation. Mirage’s megakernel takes a radically different approach: <strong>launch once, run forever</strong>.</p> <div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Traditional Model:
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en"><generator uri="https://jekyllrb.com/" version="4.3.4">Jekyll</generator><link href="https://uv-xiao.github.io/feed.xml" rel="self" type="application/atom+xml"/><link href="https://uv-xiao.github.io/" rel="alternate" type="text/html" hreflang="en"/><updated>2026-04-22T02:04:04+00:00</updated><id>https://uv-xiao.github.io/feed.xml</id><title type="html">Youwei Xiao</title><subtitle>Ph.D. candidate at Peking University. Research on compilers, DSLs, and hardware-software co-design for MLSys and EDA. </subtitle><entry><title type="html">(Paper Reading) Event Tensor: A Unified Abstraction for Compiling Dynamic Megakernel</title><link href="https://uv-xiao.github.io/blog/2026/event-tensor-dynamic-megakernel/" rel="alternate" type="text/html" title="(Paper Reading) Event Tensor: A Unified Abstraction for Compiling Dynamic Megakernel"/><published>2026-04-21T00:00:00+00:00</published><updated>2026-04-21T00:00:00+00:00</updated><id>https://uv-xiao.github.io/blog/2026/event-tensor-dynamic-megakernel</id><content type="html" xml:base="https://uv-xiao.github.io/blog/2026/event-tensor-dynamic-megakernel/"><![CDATA[<pre><code class="language-txt">@misc{jin2026eventtensor,
+  title = {Event Tensor: A Unified Abstraction for Compiling Dynamic Megakernel},
+  author = {Jin, Hongyi and Hou, Bohan and Wang, Guanjie and Lai, Ruihang and Chen, Jinqi and Ye, Zihao and Cai, Yaxing and Dong, Yixin and Cheng, Xinhao and Zhang, Zhihao and Zhao, Yilong and Huang, Yingyi and Yang, Lijie and Jiang, Jinchen and Oliaro, Gabriele and Ji, Jianan and Miao, Xupeng and Grover, Vinod and Mowry, Todd C. and Jia, Zhihao and Chen, Tianqi},
+  year = {2026},
+  eprint = {2604.13327},
+  archivePrefix = {arXiv},
+  primaryClass = {cs.DC},
+  url = {https://arxiv.org/abs/2604.13327}
+}
+</code></pre> <p>This is a reading note for <a href="https://arxiv.org/abs/2604.13327"><strong>Event Tensor: A Unified Abstraction for Compiling Dynamic Megakernel</strong></a>, submitted to arXiv on April 14, 2026.</p> <p>The short version:</p> <blockquote> <p>Event Tensor turns fine-grained megakernel synchronization into a first-class tensor object in compiler IR, so a compiler can represent, transform, and lower dynamic task dependencies instead of hand-writing one-off persistent kernels.</p> </blockquote> <p>That is the real contribution. The paper is not claiming that event counters, semaphores, persistent kernels, or GPU task queues are new by themselves. The novelty is the <strong>compiler abstraction</strong>: represent events as symbolic-shaped tensors, express producer-to-event and event-to-consumer relations with coordinate maps, and then lower the same representation into either static or dynamic megakernel schedules.</p> <h2 id="why-this-paper-matters">Why This Paper Matters</h2> <p>LLM serving is increasingly bottlenecked by execution overhead, especially in low-batch decoding:</p> <ul> <li>A decode step can contain hundreds or thousands of small GPU operations.</li> <li>Kernel launch latency can be comparable to, or larger than, the fastest kernels.</li> <li>Kernel boundaries act as global synchronization barriers.</li> <li>CUDA Graph reduces launch overhead but still preserves kernel boundaries.</li> <li>Megakernels remove launch gaps and allow tile-level overlap, but they are hard to program and usually assume fixed shapes or simple dense workloads.</li> </ul> <p>The paper targets the missing piece:</p> <div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>CUDA Graph:
+  less launch overhead
+  still kernel-by-kernel dependency boundaries
+  hard to handle many dynamic shapes without recapture
+
+Manual megakernel:
+  one persistent kernel
+  fine-grained task overlap
+  hard to write, hard to maintain, hard to support dynamism
+
+Event Tensor:
+  compiler IR for tile dependencies
+  symbolic shapes for dynamic batches
+  data-dependent event updates/triggers for MoE-like routing
+  static or dynamic scheduling generated from one abstraction
+</code></pre></div></div> <p>The key insight is very simple:</p> <div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Data tensors:
+  multidimensional values indexed by coordinates
+
+Event tensors:
+  multidimensional completion events indexed by coordinates
+</code></pre></div></div> <p>Once synchronization becomes tensor-shaped, the compiler can reuse the same symbolic-shape machinery used for data tensors. This is what makes dynamic megakernels possible without recompiling or recapturing every concrete shape.</p> <h2 id="main-contributions">Main Contributions</h2> <p>The contributions can be read as four layers.</p> <h3 id="1-event-tensor-as-a-first-class-ir-object">1. Event Tensor As A First-Class IR Object</h3> <p>The paper defines an <strong>Event Tensor</strong> as a multidimensional array of event counters. Each element records whether some set of producer tasks has completed. Consumers can wait on the event or be triggered by it.</p> <p>This changes synchronization from scattered low-level code into an analyzable IR object:</p> <div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Before:
+  hand-written semaphore counters
+  custom wait loops
+  task graph materialized or hard-coded manually
+
+After:
+  ETensor(shape, wait_count)
+  producer out_edges: task_coord -&gt; event_coord
+  consumer in_edges:  task_coord -&gt; event_coord
+  compiler lowers notify/wait/trigger
+</code></pre></div></div> <p>The paper’s formulation is roughly:</p> <div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">E</span> <span class="o">=</span> <span class="nc">ETensor</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="n">n</span><span class="p">,),</span> <span class="n">wait_count</span><span class="o">=</span><span class="mi">4</span><span class="p">)</span>
+
+<span class="n">B</span> <span class="o">=</span> <span class="nf">call_device</span><span class="p">(</span>
+    <span class="n">partial_sum</span><span class="p">,</span>
+    <span class="n">tile_num</span><span class="o">=</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="mi">4</span><span class="p">),</span>
+    <span class="n">in_edges</span><span class="o">=</span><span class="p">{},</span>
+    <span class="n">out_edges</span><span class="o">=</span><span class="p">{</span><span class="n">E</span><span class="p">:</span> <span class="sh">"</span><span class="s">ij-&gt;i</span><span class="sh">"</span><span class="p">},</span>
+<span class="p">)</span>
+
+<span class="n">C</span> <span class="o">=</span> <span class="nf">call_device</span><span class="p">(</span>
+    <span class="n">final_sum</span><span class="p">,</span>
+    <span class="n">tile_num</span><span class="o">=</span><span class="p">(</span><span class="n">n</span><span class="p">,),</span>
+    <span class="n">in_edges</span><span class="o">=</span><span class="p">{</span><span class="n">E</span><span class="p">:</span> <span class="sh">"</span><span class="s">i-&gt;i</span><span class="sh">"</span><span class="p">},</span>
+    <span class="n">out_edges</span><span class="o">=</span><span class="p">{},</span>
+<span class="p">)</span>
+</code></pre></div></div> <p>The string <code class="language-plaintext highlighter-rouge">"ij-&gt;i"</code> means that producer task <code class="language-plaintext highlighter-rouge">(i, j)</code> updates event <code class="language-plaintext highlighter-rouge">E[i]</code>. Since there are four values of <code class="language-plaintext highlighter-rouge">j</code>, each <code class="language-plaintext highlighter-rouge">E[i]</code> waits for four partial-sum tasks. The consumer task <code class="language-plaintext highlighter-rouge">final_sum(i)</code> can run as soon as <code class="language-plaintext highlighter-rouge">E[i]</code> is complete. It does not need every row’s partial sums to finish.</p> <h3 id="2-symbolic-shape-task-graphs">2. Symbolic-Shape Task Graphs</h3> <p>The Event Tensor shape can contain symbolic dimensions, such as batch size <code class="language-plaintext highlighter-rouge">B</code> or number of token blocks <code class="language-plaintext highlighter-rouge">n</code>.</p> <p>That means the compiler can represent a <strong>family of task graphs</strong>:</p> <div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Template:
+  E: ETensor((B, H))
+  task_grid: (B, H)
+
+Runtime B = 1:
+  materialized event grid has 1 * H events
+
+Runtime B = 8:
+  materialized event grid has 8 * H events
+</code></pre></div></div> <p>The compiler does not need to generate a separate CUDA Graph or megakernel for every batch size. The symbolic Event Tensor is a compact task-graph template.</p> <p>This is the first major reason the abstraction is useful for production inference. Continuous batching creates dynamic shape values all the time. Static CUDA Graph capture handles this by capturing many shape-specialized graphs, which creates warmup overhead and deployment complexity.</p> <h3 id="3-data-dependent-updates-and-triggers">3. Data-Dependent Updates And Triggers</h3> <p>Dynamic shapes are not enough. MoE layers introduce <strong>data-dependent control flow</strong>: the tasks that should run depend on routing tensors computed at runtime.</p> <p>The paper uses MoE as the core example:</p> <div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Token -&gt; TopK router -&gt; token grouping -&gt; expert GroupGEMM -&gt; scatter/output
+</code></pre></div></div> <p>For each token, <code class="language-plaintext highlighter-rouge">topk</code> decides which experts it should visit. This means:</p> <ul> <li>A grouping task for token <code class="language-plaintext highlighter-rouge">i</code> may update expert event <code class="language-plaintext highlighter-rouge">E[topk[i, k]]</code>.</li> <li>Each expert event’s wait count depends on how many tokens were routed to it.</li> <li>Each expert event may trigger a runtime-dependent range of GroupGEMM tiles.</li> <li>The range is represented by an <code class="language-plaintext highlighter-rouge">exp_indptr</code> array, similar to CSR sparse matrix indexing.</li> </ul> <p>In text form:</p> <div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>topk:
+  token i -&gt; selected experts
+
+exp_indptr:
+  expert e -&gt; GroupGEMM tile range
+  tiles for expert e are [exp_indptr[e], exp_indptr[e + 1])
+</code></pre></div></div> <p>The novelty is that Event Tensor allows these runtime tensors to participate in event indexing and triggering:</p> <div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>data-dependent update:
+  grouping_tile(token_i) notifies E[topk[i, k]]
+
+data-dependent trigger:
+  E[expert_e] triggers GroupGEMM tiles in
+  range(exp_indptr[e], exp_indptr[e + 1])
+</code></pre></div></div> <p>This is a clean abstraction boundary. The compiler still emits a persistent kernel, but the runtime values determine the actual dependency edges followed by that kernel.</p> <h3 id="4-one-abstraction-two-scheduling-strategies">4. One Abstraction, Two Scheduling Strategies</h3> <p>The same Event Tensor graph can be lowered into two scheduling styles:</p> <table> <thead> <tr> <th>Strategy</th> <th>Best For</th> <th>Mechanism</th> <th>Cost</th> </tr> </thead> <tbody> <tr> <td>Static scheduling</td> <td>Predictable workloads</td> <td>Precompute per-SM task queues, insert wait/notify</td> <td>Low runtime overhead, less adaptive</td> </tr> <tr> <td>Dynamic scheduling</td> <td>Irregular workloads</td> <td>GPU task queue, push tasks when events complete, idle SMs pop work</td> <td>Better load balance, queue overhead</td> </tr> </tbody> </table> <p>This is important because megakernel scheduling is workload-dependent. Dense transformer decode often benefits from static scheduling because tasks are regular and scheduling overhead matters. MoE and communication-heavy kernels may benefit from dynamic scheduling because task times and routing are irregular.</p> <h2 id="core-mental-model">Core Mental Model</h2> <p>Think of the computation as three objects:</p> <div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Task grid:
+  A multidimensional set of tile-level tasks.
+  Example: GEMM tiles (m_tile, n_tile).
+
+Event tensor:
+  A multidimensional set of event counters.
+  Example: E[row_block] means all partial sums for that row block are ready.
+
+Coordinate maps:
+  Functions from task coordinates to event coordinates.
+  Example: producer (i, j) updates event i.
+</code></pre></div></div> <p>The general dependency pattern is:</p> <div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>producer task -&gt; event tensor element -&gt; consumer task
+</code></pre></div></div> <p>But the dependency edges are not manually listed. They are represented by compact index maps:</p> <div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Producer grid P(i, j)
+  out_edges: P(i, j) -&gt; E(i)
+
+Consumer grid C(i)
+  in_edges: E(i) -&gt; C(i)
+</code></pre></div></div> <p>This gives the compiler enough information to generate synchronization code without materializing a huge task graph in host memory.</p> <h2 id="example-split-row-sum">Example: Split Row Sum</h2> <p>The paper’s simple example is a split-K row sum.</p> <p>Suppose:</p> <div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>A shape: (n * 32, 128)
+C shape: (n * 32)
+Goal:
+  C[row] = sum over A[row, :]
+</code></pre></div></div> <p>Instead of one task per row block, split the reduction into two stages:</p> <div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>partial_sum(i, j):
+  B[i*32 : i*32+32, j] =
+    sum A[i*32 : i*32+32, j*32 : j*32+32]
+
+final_sum(i):
+  C[i*32 : i*32+32] =
+    sum B[i*32 : i*32+32, :]
+</code></pre></div></div> <p>The first stage has task grid <code class="language-plaintext highlighter-rouge">(n, 4)</code>. The second stage has task grid <code class="language-plaintext highlighter-rouge">(n,)</code>.</p> <p>Naive kernel-by-kernel execution does this:</p> <div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>run all partial_sum(i, j)
+global kernel boundary
+run all final_sum(i)
+</code></pre></div></div> <p>Event Tensor execution does this:</p> <div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>partial_sum(0, 0) -&gt; E[0]
+partial_sum(0, 1) -&gt; E[0]
+partial_sum(0, 2) -&gt; E[0]
+partial_sum(0, 3) -&gt; E[0]
+E[0] complete -&gt; final_sum(0)
+
+partial_sum(1, 0) -&gt; E[1]
+...
+E[1] complete -&gt; final_sum(1)
+</code></pre></div></div> <p>Now <code class="language-plaintext highlighter-rouge">final_sum(0)</code> can start as soon as row block 0 is ready, even if row block 1 is still computing.</p> <p>The event counter implementation is:</p> <div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>E[i].counter starts at 4
+
+partial_sum(i, j):
+  compute B tile
+  atomic_dec(E[i].counter)
+
+final_sum(i):
+  wait until E[i].counter == 0
+  compute C tile
+</code></pre></div></div> <p>This looks small, but this is exactly the dependency pattern that scales to transformer layers: a later tiled operator often only needs a subset of a previous operator’s tiles.</p> <h2 id="event-tensor-ir">Event Tensor IR</h2> <p>A minimal IR for reproducing the abstraction needs these pieces.</p> <div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">class</span> <span class="nc">EventTensor</span><span class="p">:</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="n">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">shape</span><span class="p">,</span> <span class="n">wait_count</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="n">self</span><span class="p">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">name</span>
+        <span class="n">self</span><span class="p">.</span><span class="n">shape</span> <span class="o">=</span> <span class="n">shape</span>          <span class="c1"># can contain symbolic variables
+</span>        <span class="n">self</span><span class="p">.</span><span class="n">wait_count</span> <span class="o">=</span> <span class="n">wait_count</span>
+
+<span class="k">class</span> <span class="nc">Edge</span><span class="p">:</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="n">self</span><span class="p">,</span> <span class="n">event_tensor</span><span class="p">,</span> <span class="n">coord_map</span><span class="p">,</span> <span class="n">kind</span><span class="p">):</span>
+        <span class="n">self</span><span class="p">.</span><span class="n">event_tensor</span> <span class="o">=</span> <span class="n">event_tensor</span>
+        <span class="n">self</span><span class="p">.</span><span class="n">coord_map</span> <span class="o">=</span> <span class="n">coord_map</span>  <span class="c1"># task_coord -&gt; event_coord
+</span>        <span class="n">self</span><span class="p">.</span><span class="n">kind</span> <span class="o">=</span> <span class="n">kind</span>            <span class="c1"># "in" or "out"
+</span>
+<span class="k">class</span> <span class="nc">TaskGrid</span><span class="p">:</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="n">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">tile_shape</span><span class="p">,</span> <span class="n">device_func</span><span class="p">):</span>
+        <span class="n">self</span><span class="p">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">name</span>
+        <span class="n">self</span><span class="p">.</span><span class="n">tile_shape</span> <span class="o">=</span> <span class="n">tile_shape</span>
+        <span class="n">self</span><span class="p">.</span><span class="n">device_func</span> <span class="o">=</span> <span class="n">device_func</span>
+        <span class="n">self</span><span class="p">.</span><span class="n">in_edges</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">self</span><span class="p">.</span><span class="n">out_edges</span> <span class="o">=</span> <span class="p">[]</span>
+
+<span class="k">class</span> <span class="nc">GraphFunc</span><span class="p">:</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="n">self</span><span class="p">):</span>
+        <span class="n">self</span><span class="p">.</span><span class="n">task_grids</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">self</span><span class="p">.</span><span class="n">event_tensors</span> <span class="o">=</span> <span class="p">[]</span>
+</code></pre></div></div> <p>For the split row sum:</p> <div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">n</span> <span class="o">=</span> <span class="nc">SymVar</span><span class="p">(</span><span class="sh">"</span><span class="s">n</span><span class="sh">"</span><span class="p">)</span>
+<span class="n">E</span> <span class="o">=</span> <span class="nc">EventTensor</span><span class="p">(</span><span class="sh">"</span><span class="s">E</span><span class="sh">"</span><span class="p">,</span> <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="n">n</span><span class="p">,),</span> <span class="n">wait_count</span><span class="o">=</span><span class="mi">4</span><span class="p">)</span>
+
+<span class="n">partial</span> <span class="o">=</span> <span class="nc">TaskGrid</span><span class="p">(</span><span class="sh">"</span><span class="s">partial_sum</span><span class="sh">"</span><span class="p">,</span> <span class="n">tile_shape</span><span class="o">=</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="mi">4</span><span class="p">),</span> <span class="n">device_func</span><span class="o">=</span><span class="n">partial_sum</span><span class="p">)</span>
+<span class="n">partial</span><span class="p">.</span><span class="n">out_edges</span><span class="p">.</span><span class="nf">append</span><span class="p">(</span><span class="nc">Edge</span><span class="p">(</span><span class="n">E</span><span class="p">,</span> <span class="n">coord_map</span><span class="o">=</span><span class="k">lambda</span> <span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">:</span> <span class="p">(</span><span class="n">i</span><span class="p">,),</span> <span class="n">kind</span><span class="o">=</span><span class="sh">"</span><span class="s">out</span><span class="sh">"</span><span class="p">))</span>
+
+<span class="n">final</span> <span class="o">=</span> <span class="nc">TaskGrid</span><span class="p">(</span><span class="sh">"</span><span class="s">final_sum</span><span class="sh">"</span><span class="p">,</span> <span class="n">tile_shape</span><span class="o">=</span><span class="p">(</span><span class="n">n</span><span class="p">,),</span> <span class="n">device_func</span><span class="o">=</span><span class="n">final_sum</span><span class="p">)</span>
+<span class="n">final</span><span class="p">.</span><span class="n">in_edges</span><span class="p">.</span><span class="nf">append</span><span class="p">(</span><span class="nc">Edge</span><span class="p">(</span><span class="n">E</span><span class="p">,</span> <span class="n">coord_map</span><span class="o">=</span><span class="k">lambda</span> <span class="n">i</span><span class="p">:</span> <span class="p">(</span><span class="n">i</span><span class="p">,),</span> <span class="n">kind</span><span class="o">=</span><span class="sh">"</span><span class="s">in</span><span class="sh">"</span><span class="p">))</span>
+
+<span class="n">graph</span> <span class="o">=</span> <span class="nc">GraphFunc</span><span class="p">()</span>
+<span class="n">graph</span><span class="p">.</span><span class="n">event_tensors</span><span class="p">.</span><span class="nf">append</span><span class="p">(</span><span class="n">E</span><span class="p">)</span>
+<span class="n">graph</span><span class="p">.</span><span class="n">task_grids</span><span class="p">.</span><span class="nf">extend</span><span class="p">([</span><span class="n">partial</span><span class="p">,</span> <span class="n">final</span><span class="p">])</span>
+</code></pre></div></div> <p>The compiler must infer two facts:</p> <div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>E[i] producer count = number of partial tasks that map to E[i] = 4
+final_sum(i) is ready when E[i] reaches zero
+</code></pre></div></div> <p>For static maps like <code class="language-plaintext highlighter-rouge">"ij-&gt;i"</code>, this can be derived statically. For data-dependent maps like <code class="language-plaintext highlighter-rouge">topk[i, k]</code>, initialization must be computed at runtime.</p> <h2 id="runtime-semantics">Runtime Semantics</h2> <p>At runtime, an Event Tensor is lowered to an integer tensor.</p> <div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>E: ETensor(shape=(n,), wait_count=4)
+
+lowers to:
+  int E_counter[n]
+  initialized to 4 for each i
+</code></pre></div></div> <p>The two basic operations are:</p> <div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">notify</span><span class="p">(</span><span class="n">E</span><span class="p">,</span> <span class="n">idx</span><span class="p">)</span><span class="o">:</span>
+  <span class="n">old</span> <span class="o">=</span> <span class="n">atomic_sub</span><span class="p">(</span><span class="o">&amp;</span><span class="n">E_counter</span><span class="p">[</span><span class="n">idx</span><span class="p">],</span> <span class="mi">1</span><span class="p">)</span>
+  <span class="k">if</span> <span class="n">old</span> <span class="o">==</span> <span class="mi">1</span><span class="o">:</span>
+      <span class="n">trigger</span> <span class="n">consumers</span> <span class="n">of</span> <span class="n">E</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span>
+
+<span class="n">wait</span><span class="p">(</span><span class="n">E</span><span class="p">,</span> <span class="n">idx</span><span class="p">)</span><span class="o">:</span>
+  <span class="k">while</span> <span class="n">atomic_load</span><span class="p">(</span><span class="o">&amp;</span><span class="n">E_counter</span><span class="p">[</span><span class="n">idx</span><span class="p">])</span> <span class="o">!=</span> <span class="mi">0</span><span class="o">:</span>
+      <span class="n">spin</span>
+</code></pre></div></div> <p>For static scheduling, <code class="language-plaintext highlighter-rouge">trigger</code> usually just releases a waiting task because the task is already in some SM’s precomputed queue.</p> <p>For dynamic scheduling, <code class="language-plaintext highlighter-rouge">trigger</code> pushes newly ready consumer tasks into a GPU queue.</p> <p>Important implementation notes:</p> <ul> <li><code class="language-plaintext highlighter-rouge">notify</code> must publish the producer’s writes before the counter reaches zero.</li> <li><code class="language-plaintext highlighter-rouge">wait</code> must acquire visibility of producer writes before reading produced data.</li> <li>A practical CUDA implementation should use release semantics on notify and acquire semantics after wait, or an equivalent combination of atomics and fences.</li> <li>The paper describes the runtime state as integer tensors plus scheduler queues. It does not require a general host-side task graph executor at runtime.</li> </ul> <h2 id="static-scheduling">Static Scheduling</h2> <p>Static scheduling precomputes the task order before launch.</p> <p>The generated megakernel has one persistent loop per SM or worker group:</p> <div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>host:
+  static_schedule = GenerateStaticSchedule(graph)
+  copy static_schedule to GPU
+  launch persistent_kernel&lt;&lt;&lt;num_sms, ...&gt;&gt;&gt;(static_schedule, ...)
+
+device:
+  sm_id = get_sm_id()
+  while task = static_schedule[sm_id].next():
+      for each input event of task:
+          wait(event)
+      run task tile
+      for each output event of task:
+          notify(event)
+</code></pre></div></div> <p>The paper’s static transformation can be written as:</p> <div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">def</span> <span class="nf">static_schedule_transform</span><span class="p">(</span><span class="n">mod</span><span class="p">,</span> <span class="n">graph</span><span class="p">):</span>
+    <span class="n">mod_updated</span> <span class="o">=</span> <span class="nf">copy</span><span class="p">(</span><span class="n">mod</span><span class="p">)</span>
+    <span class="n">static_schedule</span> <span class="o">=</span> <span class="nc">GenerateStaticSchedule</span><span class="p">(</span><span class="n">graph</span><span class="p">)</span>
+    <span class="n">fused_kernel</span> <span class="o">=</span> <span class="nc">NewPersistentKernel</span><span class="p">()</span>
+    <span class="n">fused_kernel</span><span class="p">.</span><span class="nf">add_buffer</span><span class="p">(</span><span class="n">static_schedule</span><span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">task_grid</span> <span class="ow">in</span> <span class="n">graph</span><span class="p">.</span><span class="n">task_grids</span><span class="p">:</span>
+        <span class="n">fused_kernel</span><span class="p">.</span><span class="nf">add_dispatch_logic</span><span class="p">(</span><span class="n">task_grid</span><span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">event</span> <span class="ow">in</span> <span class="n">task_grid</span><span class="p">.</span><span class="n">in_edges</span><span class="p">:</span>
+            <span class="n">fused_kernel</span><span class="p">.</span><span class="nf">add_wait_logic</span><span class="p">(</span><span class="n">event</span><span class="p">)</span>
+
+        <span class="n">fused_kernel</span><span class="p">.</span><span class="nf">add_tile_logic</span><span class="p">(</span><span class="n">task_grid</span><span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">event</span> <span class="ow">in</span> <span class="n">task_grid</span><span class="p">.</span><span class="n">out_edges</span><span class="p">:</span>
+            <span class="n">fused_kernel</span><span class="p">.</span><span class="nf">add_notify_logic</span><span class="p">(</span><span class="n">event</span><span class="p">)</span>
+
+    <span class="n">mod_updated</span><span class="p">.</span><span class="nf">replace</span><span class="p">(</span><span class="n">graph</span><span class="p">,</span> <span class="n">fused_kernel</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">mod_updated</span>
+</code></pre></div></div> <p>For regular workloads, static scheduling is appealing because it avoids GPU queue push/pop overhead. The cost is that the schedule may be suboptimal when task durations vary.</p> <p>The paper uses these policies for dynamism under static scheduling:</p> <ul> <li><strong>Shape dynamism</strong>: sample representative shape values; unseen shapes reuse the queue for the next larger sampled shape.</li> <li><strong>Data-dependent dynamism</strong>: conservatively rewrite related notify/wait operations to a single worst-case event such as <code class="language-plaintext highlighter-rouge">E[0]</code>.</li> <li><strong>Queue construction</strong>: use a simple round-robin policy.</li> </ul> <p>That means static scheduling supports dynamism, but conservatively. It is best when the task graph is regular enough that the precomputed order remains good.</p> <h2 id="dynamic-scheduling">Dynamic Scheduling</h2> <p>Dynamic scheduling uses a lightweight GPU task scheduler.</p> <p>The execution model is:</p> <div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>ready queue:
+  contains tasks whose dependencies are satisfied
+
+worker SM:
+  pop ready task
+  execute tile
+  notify output events
+  if an event reaches zero:
+      push its consumer tasks
+</code></pre></div></div> <p>Text diagram:</p> <div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>time T1:
+  SM0 finishes producer P0
+  E[k] goes from 2 to 1
+  no consumer is ready yet
+  SM0 pops another ready task
+
+time T2:
+  SM1 finishes producer P1
+  E[k] goes from 1 to 0
+  consumers of E[k] are pushed to queue
+  an idle SM pops one consumer and runs it
+</code></pre></div></div> <p>The paper’s dynamic transformation is:</p> <div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">def</span> <span class="nf">dynamic_schedule_transform</span><span class="p">(</span><span class="n">mod</span><span class="p">,</span> <span class="n">graph</span><span class="p">):</span>
+    <span class="n">mod_updated</span> <span class="o">=</span> <span class="nf">copy</span><span class="p">(</span><span class="n">mod</span><span class="p">)</span>
+    <span class="n">fused_kernel</span> <span class="o">=</span> <span class="nc">NewPersistentKernel</span><span class="p">()</span>
+    <span class="n">scheduler</span> <span class="o">=</span> <span class="nc">GPUScheduler</span><span class="p">()</span>
+
+    <span class="n">fused_kernel</span><span class="p">.</span><span class="nf">add_pop_logic</span><span class="p">(</span><span class="n">scheduler</span><span class="p">.</span><span class="n">pop_tasks</span><span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">task_grid</span> <span class="ow">in</span> <span class="n">graph</span><span class="p">.</span><span class="n">task_grids</span><span class="p">:</span>
+        <span class="n">fused_kernel</span><span class="p">.</span><span class="nf">add_dispatch_logic</span><span class="p">(</span><span class="n">task_grid</span><span class="p">)</span>
+        <span class="n">fused_kernel</span><span class="p">.</span><span class="nf">add_tile_logic</span><span class="p">(</span><span class="n">task_grid</span><span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">event</span> <span class="ow">in</span> <span class="n">task_grid</span><span class="p">.</span><span class="n">out_edges</span><span class="p">:</span>
+            <span class="n">fused_kernel</span><span class="p">.</span><span class="nf">add_complete_on_logic</span><span class="p">(</span>
+                <span class="n">event</span><span class="p">,</span>
+                <span class="n">on_complete</span><span class="o">=</span><span class="n">scheduler</span><span class="p">.</span><span class="n">push_tasks</span><span class="p">,</span>
+            <span class="p">)</span>
+
+    <span class="n">mod_updated</span><span class="p">.</span><span class="nf">replace</span><span class="p">(</span><span class="n">graph</span><span class="p">,</span> <span class="n">fused_kernel</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">mod_updated</span>
+</code></pre></div></div> <p>The paper reports a centralized queue in global memory shared across SMs. This is simple but may contend at scale. The appendix also describes an <strong>early push</strong> optimization: push a consumer task when all its producer tasks have been dispatched, not necessarily completed, then keep an extra wait before the consumer’s actual execution. This overlaps scheduler push overhead with producer computation.</p> <p>Inferred implementation skeleton:</p> <div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">while</span> <span class="p">(</span><span class="nb">true</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">Task</span> <span class="n">t</span> <span class="o">=</span> <span class="n">queue_pop</span><span class="p">(</span><span class="n">global_ready_queue</span><span class="p">);</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">t</span><span class="p">.</span><span class="n">kind</span> <span class="o">==</span> <span class="n">DONE</span><span class="p">)</span> <span class="k">break</span><span class="p">;</span>
+
+    <span class="c1">// The task may have been pushed early.</span>
+    <span class="k">for</span> <span class="p">(</span><span class="n">dep</span> <span class="n">in</span> <span class="n">t</span><span class="p">.</span><span class="n">input_events</span><span class="p">)</span> <span class="p">{</span>
+        <span class="n">wait</span><span class="p">(</span><span class="n">dep</span><span class="p">.</span><span class="n">event</span><span class="p">,</span> <span class="n">dep</span><span class="p">.</span><span class="n">index</span><span class="p">);</span>
+    <span class="p">}</span>
+
+    <span class="n">dispatch_tile</span><span class="p">(</span><span class="n">t</span><span class="p">);</span>
+
+    <span class="k">for</span> <span class="p">(</span><span class="n">out</span> <span class="n">in</span> <span class="n">t</span><span class="p">.</span><span class="n">output_events</span><span class="p">)</span> <span class="p">{</span>
+        <span class="n">old</span> <span class="o">=</span> <span class="n">atomic_sub_release</span><span class="p">(</span><span class="o">&amp;</span><span class="n">out</span><span class="p">.</span><span class="n">event</span><span class="p">.</span><span class="n">counter</span><span class="p">[</span><span class="n">out</span><span class="p">.</span><span class="n">index</span><span class="p">],</span> <span class="mi">1</span><span class="p">);</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">old</span> <span class="o">==</span> <span class="mi">1</span><span class="p">)</span> <span class="p">{</span>
+            <span class="k">for</span> <span class="p">(</span><span class="n">consumer</span> <span class="n">in</span> <span class="n">consumers</span><span class="p">(</span><span class="n">out</span><span class="p">.</span><span class="n">event</span><span class="p">,</span> <span class="n">out</span><span class="p">.</span><span class="n">index</span><span class="p">))</span> <span class="p">{</span>
+                <span class="n">queue_push</span><span class="p">(</span><span class="n">global_ready_queue</span><span class="p">,</span> <span class="n">consumer</span><span class="p">);</span>
+            <span class="p">}</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div></div> <p>Dynamic scheduling naturally handles runtime shapes and data-dependent routing because tasks are generated or selected after runtime values are known.</p> <h2 id="data-dependent-moe-in-detail">Data-Dependent MoE In Detail</h2> <p>MoE is the best example because it has both irregular work and fine-grained producer-consumer structure.</p> <p>A simplified MoE layer:</p> <div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>input tokens
+  -&gt; router computes topk experts
+  -&gt; grouping reorders tokens by expert
+  -&gt; GroupGEMM expert computation
+  -&gt; scatter/combine output
+</code></pre></div></div> <p>The dynamic dependency challenge:</p> <div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>The compiler does not know at compile time:
+  how many tokens go to expert 0
+  how many tokens go to expert 1
+  which grouping tasks update which expert events
+  how many GroupGEMM tiles each expert needs
+</code></pre></div></div> <p>Event Tensor representation:</p> <div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>E_expert[e]:
+  event for expert e's grouped tokens being ready
+
+topk[token, k]:
+  runtime selected expert
+
+exp_count[e]:
+  runtime number of tokens routed to expert e
+
+exp_indptr[e]:
+  prefix sum of GroupGEMM tiles per expert
+</code></pre></div></div> <p>Runtime initialization:</p> <div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="n">experts</span><span class="p">:</span>
+    <span class="n">E_expert</span><span class="p">[</span><span class="n">e</span><span class="p">].</span><span class="n">counter</span> <span class="o">=</span> <span class="n">exp_count</span><span class="p">[</span><span class="n">e</span><span class="p">]</span>
+</code></pre></div></div> <p>Grouping tasks:</p> <div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">for</span> <span class="n">token</span> <span class="ow">in</span> <span class="n">tokens</span><span class="p">:</span>
+    <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nf">range</span><span class="p">(</span><span class="n">top_k</span><span class="p">):</span>
+        <span class="n">e</span> <span class="o">=</span> <span class="n">topk</span><span class="p">[</span><span class="n">token</span><span class="p">,</span> <span class="n">k</span><span class="p">]</span>
+        <span class="nf">group_token_for_expert</span><span class="p">(</span><span class="n">token</span><span class="p">,</span> <span class="n">e</span><span class="p">)</span>
+        <span class="nf">notify</span><span class="p">(</span><span class="n">E_expert</span><span class="p">[</span><span class="n">e</span><span class="p">])</span>
+</code></pre></div></div> <p>Triggering GroupGEMM:</p> <div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">def</span> <span class="nf">on_expert_ready</span><span class="p">(</span><span class="n">e</span><span class="p">):</span>
+    <span class="n">begin</span> <span class="o">=</span> <span class="n">exp_indptr</span><span class="p">[</span><span class="n">e</span><span class="p">]</span>
+    <span class="n">end</span> <span class="o">=</span> <span class="n">exp_indptr</span><span class="p">[</span><span class="n">e</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span>
+    <span class="k">for</span> <span class="n">tile_id</span> <span class="ow">in</span> <span class="nf">range</span><span class="p">(</span><span class="n">begin</span><span class="p">,</span> <span class="n">end</span><span class="p">):</span>
+        <span class="nf">push_task</span><span class="p">(</span><span class="n">GroupGEMM</span><span class="p">,</span> <span class="n">tile_id</span><span class="p">)</span>
+</code></pre></div></div> <p>This is the core abstraction win. The same Event Tensor can encode:</p> <ul> <li>static edges like <code class="language-plaintext highlighter-rouge">ij -&gt; i</code>;</li> <li>symbolic-shape event grids like <code class="language-plaintext highlighter-rouge">(B, H)</code>;</li> <li>data-dependent updates like <code class="language-plaintext highlighter-rouge">i -&gt; topk[i, :]</code>;</li> <li>data-dependent triggers like <code class="language-plaintext highlighter-rouge">e -&gt; range(exp_indptr[e], exp_indptr[e + 1])</code>.</li> </ul> <p>Without this abstraction, every MoE megakernel needs custom scheduling code.</p> <h2 id="lowering-to-a-minimal-runtime">Lowering To A Minimal Runtime</h2> <p>The paper emphasizes that ETC does not need a heavy task-graph runtime.</p> <p>Runtime state:</p> <div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>1. integer tensors for Event Tensor counters
+2. task queue data structures for dynamic scheduling
+3. precomputed execution queues for static scheduling
+</code></pre></div></div> <p>The dependency graph is compiled into control flow. There is no generic runtime walking a fully materialized graph of millions of nodes.</p> <p>This matters because tile-level LLM task graphs can be huge. If every tile and every edge were separately materialized, graph management overhead could dominate.</p> <p>The compiled-in model:</p> <div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Event Tensor IR:
+  compact symbolic dependencies
+
+compiler lowering:
+  wait/notify/push/pop inserted into persistent kernel
+
+runtime:
+  counters and queues only
+</code></pre></div></div> <h2 id="end-to-end-compilation-flow">End-To-End Compilation Flow</h2> <p>The paper’s system is the Event Tensor Compiler, or ETC. It is implemented as compiler passes on top of Apache TVM. The abstraction itself is intended to be compiler-agnostic and could be integrated into stacks such as Triton or CuteDSL.</p> <p>The pipeline:</p> <div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>1. Start from a computational graph with tiled operators.
+   Device functions are already partitioned into CTA-level tasks.
+
+2. Add Event Tensors and in_edges/out_edges.
+   These encode fine-grained dependencies between task grids.
+
+3. Run graph-level optimizations.
+   This includes standard graph optimization and memory planning.
+
+4. Run tile-level optimizations.
+   This decides low-level instruction mapping, pipelining, and operator details.
+
+5. Choose a scheduling transformation.
+   Static: precompute per-SM queues.
+   Dynamic: insert scheduler push/pop logic.
+
+6. Emit a persistent GPU kernel.
+   The fused device function dispatches all tile kinds inside one kernel.
+
+7. Add weight-prefetching pass.
+   If the task's weights are known before input activation arrives, prefetch them while waiting.
+
+8. For static scheduling, materialize the per-SM task order.
+</code></pre></div></div> <p>The important assumption is step 1: ETC starts from tiled operators. It is not yet automatically discovering every possible tile partition from a high-level PyTorch graph. The conclusion says future work could generate Event Tensor task graphs from standard computational graphs.</p> <h2 id="how-to-replicate-the-system-from-scratch">How To Replicate The System From Scratch</h2> <p>This section is not all explicitly specified by the paper. It is a practical reconstruction plan based on the paper’s abstraction and pseudocode.</p> <h3 id="step-1-build-a-tiny-event-tensor-ir">Step 1: Build A Tiny Event Tensor IR</h3> <p>Implement:</p> <div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">SymVar</span>
+<span class="n">Tensor</span>
+<span class="n">EventTensor</span>
+<span class="n">TaskGrid</span>
+<span class="n">EdgeMap</span>
+<span class="n">GraphFunc</span>
+</code></pre></div></div> <p>Required APIs:</p> <div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">graph</span><span class="p">.</span><span class="nf">add_event</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">shape</span><span class="p">,</span> <span class="n">wait_count</span><span class="p">)</span>
+<span class="n">graph</span><span class="p">.</span><span class="nf">call_device</span><span class="p">(</span><span class="n">fn</span><span class="p">,</span> <span class="n">tile_num</span><span class="p">,</span> <span class="n">args</span><span class="p">,</span> <span class="n">in_edges</span><span class="p">,</span> <span class="n">out_edges</span><span class="p">)</span>
+<span class="nf">edge_map</span><span class="p">(</span><span class="n">task_coord</span><span class="p">,</span> <span class="n">runtime_tensors</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">event_coord_or_range</span>
+</code></pre></div></div> <p>Represent edge maps in two forms:</p> <div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>static affine/einsum maps:
+  "ij-&gt;i"
+  "bh-&gt;bh"
+  "bh-&gt;u"
+
+general lambda maps:
+  lambda i, k: topk[i, k]
+  lambda e: range(exp_indptr[e], exp_indptr[e + 1])
+</code></pre></div></div> <p>For a first prototype, do not implement a full parser. Store Python callbacks or a small structured map object.</p> <h3 id="step-2-implement-counter-initialization">Step 2: Implement Counter Initialization</h3> <p>For each Event Tensor element, compute the number of producers that must notify it.</p> <p>Static case:</p> <div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">for</span> <span class="n">event_index</span> <span class="ow">in</span> <span class="n">E</span><span class="p">.</span><span class="n">shape</span><span class="p">:</span>
+    <span class="n">E</span><span class="p">.</span><span class="n">counter</span><span class="p">[</span><span class="n">event_index</span><span class="p">]</span> <span class="o">=</span> <span class="nf">count_producers_mapping_to</span><span class="p">(</span><span class="n">event_index</span><span class="p">)</span>
+</code></pre></div></div> <p>For <code class="language-plaintext highlighter-rouge">"ij-&gt;i"</code> with tile shape <code class="language-plaintext highlighter-rouge">(n, 4)</code>:</p> <div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">E</span><span class="p">.</span><span class="n">counter</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="mi">4</span>
+</code></pre></div></div> <p>Dynamic case:</p> <div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">E</span><span class="p">.</span><span class="n">counter</span><span class="p">[</span><span class="n">e</span><span class="p">]</span> <span class="o">=</span> <span class="n">runtime_exp_count</span><span class="p">[</span><span class="n">e</span><span class="p">]</span>
+</code></pre></div></div> <p>For MoE, this count can be computed from <code class="language-plaintext highlighter-rouge">topk</code>.</p> <h3 id="step-3-implement-notify-and-wait-intrinsics">Step 3: Implement Notify And Wait Intrinsics</h3> <p>Define compiler intrinsics:</p> <div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nf">event_notify</span><span class="p">(</span><span class="n">E</span><span class="p">,</span> <span class="n">index</span><span class="p">)</span>
+<span class="nf">event_wait</span><span class="p">(</span><span class="n">E</span><span class="p">,</span> <span class="n">index</span><span class="p">)</span>
+<span class="nf">event_trigger</span><span class="p">(</span><span class="n">E</span><span class="p">,</span> <span class="n">index</span><span class="p">)</span>
+</code></pre></div></div> <p>Lower them to CUDA-like code:</p> <div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">__device__</span> <span class="kt">void</span> <span class="nf">event_notify</span><span class="p">(</span><span class="kt">int</span><span class="o">*</span> <span class="n">counter</span><span class="p">,</span> <span class="kt">int</span> <span class="n">idx</span><span class="p">)</span> <span class="p">{</span>
+    <span class="kt">int</span> <span class="n">old</span> <span class="o">=</span> <span class="n">atomicSubRelease</span><span class="p">(</span><span class="o">&amp;</span><span class="n">counter</span><span class="p">[</span><span class="n">idx</span><span class="p">],</span> <span class="mi">1</span><span class="p">);</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">old</span> <span class="o">==</span> <span class="mi">1</span><span class="p">)</span> <span class="p">{</span>
+        <span class="c1">// event complete</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+
+<span class="n">__device__</span> <span class="kt">void</span> <span class="nf">event_wait</span><span class="p">(</span><span class="kt">int</span><span class="o">*</span> <span class="n">counter</span><span class="p">,</span> <span class="kt">int</span> <span class="n">idx</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">while</span> <span class="p">(</span><span class="n">atomicLoadAcquire</span><span class="p">(</span><span class="o">&amp;</span><span class="n">counter</span><span class="p">[</span><span class="n">idx</span><span class="p">])</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
+        <span class="n">__nanosleep</span><span class="p">(</span><span class="mi">8</span><span class="p">);</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div></div> <p>If release/acquire atomics are not available in your prototype stack, use conservative fences:</p> <div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">__threadfence</span><span class="p">();</span>
+<span class="n">atomicSub</span><span class="p">(</span><span class="o">&amp;</span><span class="n">counter</span><span class="p">[</span><span class="n">idx</span><span class="p">],</span> <span class="mi">1</span><span class="p">);</span>
+
+<span class="k">while</span> <span class="p">(</span><span class="n">atomicAdd</span><span class="p">(</span><span class="o">&amp;</span><span class="n">counter</span><span class="p">[</span><span class="n">idx</span><span class="p">],</span> <span class="mi">0</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{}</span>
+<span class="n">__threadfence</span><span class="p">();</span>
+</code></pre></div></div> <p>This is slower but useful for correctness-first prototyping.</p> <h3 id="step-4-implement-a-static-scheduler">Step 4: Implement A Static Scheduler</h3> <p>For every task grid, enumerate concrete tasks for the selected shape.</p> <div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">tasks</span> <span class="o">=</span> <span class="p">[]</span>
+<span class="k">for</span> <span class="n">task_grid</span> <span class="ow">in</span> <span class="n">graph</span><span class="p">.</span><span class="n">task_grids</span><span class="p">:</span>
+    <span class="k">for</span> <span class="n">coord</span> <span class="ow">in</span> <span class="nf">product</span><span class="p">(</span><span class="nf">range</span><span class="p">(</span><span class="n">dim</span><span class="p">)</span> <span class="k">for</span> <span class="n">dim</span> <span class="ow">in</span> <span class="nf">materialize</span><span class="p">(</span><span class="n">task_grid</span><span class="p">.</span><span class="n">tile_shape</span><span class="p">)):</span>
+        <span class="n">tasks</span><span class="p">.</span><span class="nf">append</span><span class="p">(</span><span class="nc">TaskInstance</span><span class="p">(</span><span class="n">task_grid</span><span class="p">,</span> <span class="n">coord</span><span class="p">))</span>
+</code></pre></div></div> <p>Use round-robin per-SM queues:</p> <div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">queues</span> <span class="o">=</span> <span class="p">[[]</span> <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nf">range</span><span class="p">(</span><span class="n">num_sms</span><span class="p">)]</span>
+<span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">task</span> <span class="ow">in</span> <span class="nf">enumerate</span><span class="p">(</span><span class="n">tasks</span><span class="p">):</span>
+    <span class="n">queues</span><span class="p">[</span><span class="n">k</span> <span class="o">%</span> <span class="n">num_sms</span><span class="p">].</span><span class="nf">append</span><span class="p">(</span><span class="n">task</span><span class="p">)</span>
+</code></pre></div></div> <p>Emit one persistent kernel:</p> <div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">while</span> <span class="p">(</span><span class="n">cursor</span> <span class="o">&lt;</span> <span class="n">queue_len</span><span class="p">[</span><span class="n">sm_id</span><span class="p">])</span> <span class="p">{</span>
+    <span class="n">Task</span> <span class="n">t</span> <span class="o">=</span> <span class="n">queue</span><span class="p">[</span><span class="n">sm_id</span><span class="p">][</span><span class="n">cursor</span><span class="o">++</span><span class="p">];</span>
+
+    <span class="k">for</span> <span class="n">each</span> <span class="n">input</span> <span class="n">edge</span><span class="o">:</span>
+        <span class="n">idx</span> <span class="o">=</span> <span class="n">eval_edge_map</span><span class="p">(</span><span class="n">edge</span><span class="p">,</span> <span class="n">t</span><span class="p">.</span><span class="n">coord</span><span class="p">);</span>
+        <span class="n">event_wait</span><span class="p">(</span><span class="n">edge</span><span class="p">.</span><span class="n">E</span><span class="p">,</span> <span class="n">idx</span><span class="p">);</span>
+
+    <span class="n">dispatch_task</span><span class="p">(</span><span class="n">t</span><span class="p">);</span>
+
+    <span class="k">for</span> <span class="n">each</span> <span class="n">output</span> <span class="n">edge</span><span class="o">:</span>
+        <span class="n">idx</span> <span class="o">=</span> <span class="n">eval_edge_map</span><span class="p">(</span><span class="n">edge</span><span class="p">,</span> <span class="n">t</span><span class="p">.</span><span class="n">coord</span><span class="p">);</span>
+        <span class="n">event_notify</span><span class="p">(</span><span class="n">edge</span><span class="p">.</span><span class="n">E</span><span class="p">,</span> <span class="n">idx</span><span class="p">);</span>
+<span class="p">}</span>
+</code></pre></div></div> <p>This already replicates the paper’s basic static scheduling idea.</p> <h3 id="step-5-implement-a-dynamic-scheduler">Step 5: Implement A Dynamic Scheduler</h3> <p>Start with a simple global MPMC queue in GPU global memory:</p> <div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">struct</span> <span class="n">Queue</span> <span class="p">{</span>
+    <span class="n">Task</span><span class="o">*</span> <span class="n">buffer</span><span class="p">;</span>
+    <span class="kt">unsigned</span> <span class="kt">int</span> <span class="n">head</span><span class="p">;</span>
+    <span class="kt">unsigned</span> <span class="kt">int</span> <span class="n">tail</span><span class="p">;</span>
+<span class="p">};</span>
+</code></pre></div></div> <p>A simple prototype can use atomic increments:</p> <div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">bool</span> <span class="nf">push</span><span class="p">(</span><span class="n">Queue</span><span class="o">*</span> <span class="n">q</span><span class="p">,</span> <span class="n">Task</span> <span class="n">t</span><span class="p">)</span> <span class="p">{</span>
+    <span class="kt">int</span> <span class="n">pos</span> <span class="o">=</span> <span class="n">atomicAdd</span><span class="p">(</span><span class="o">&amp;</span><span class="n">q</span><span class="o">-&gt;</span><span class="n">tail</span><span class="p">,</span> <span class="mi">1</span><span class="p">);</span>
+    <span class="n">q</span><span class="o">-&gt;</span><span class="n">buffer</span><span class="p">[</span><span class="n">pos</span><span class="p">]</span> <span class="o">=</span> <span class="n">t</span><span class="p">;</span>
+    <span class="k">return</span> <span class="nb">true</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="n">bool</span> <span class="nf">pop</span><span class="p">(</span><span class="n">Queue</span><span class="o">*</span> <span class="n">q</span><span class="p">,</span> <span class="n">Task</span><span class="o">*</span> <span class="n">out</span><span class="p">)</span> <span class="p">{</span>
+    <span class="kt">int</span> <span class="n">pos</span> <span class="o">=</span> <span class="n">atomicAdd</span><span class="p">(</span><span class="o">&amp;</span><span class="n">q</span><span class="o">-&gt;</span><span class="n">head</span><span class="p">,</span> <span class="mi">1</span><span class="p">);</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">pos</span> <span class="o">&gt;=</span> <span class="n">q</span><span class="o">-&gt;</span><span class="n">tail</span><span class="p">)</span> <span class="k">return</span> <span class="nb">false</span><span class="p">;</span>
+    <span class="o">*</span><span class="n">out</span> <span class="o">=</span> <span class="n">q</span><span class="o">-&gt;</span><span class="n">buffer</span><span class="p">[</span><span class="n">pos</span><span class="p">];</span>
+    <span class="k">return</span> <span class="nb">true</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div></div> <p>This is not production-grade because <code class="language-plaintext highlighter-rouge">tail</code> visibility and empty-queue races need careful handling. For a robust version:</p> <ul> <li>use fixed-capacity ring buffers with sequence numbers;</li> <li>or one queue per SM/CTA plus work stealing;</li> <li>or a centralized queue with CAS-protected head/tail and memory fences.</li> </ul> <p>For functional replication, the first version is enough if tasks are seeded conservatively and queue capacity is large.</p> <p>Dynamic kernel skeleton:</p> <div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">while</span> <span class="p">(</span><span class="o">!</span><span class="n">done</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">Task</span> <span class="n">t</span><span class="p">;</span>
+    <span class="k">if</span> <span class="p">(</span><span class="o">!</span><span class="n">pop</span><span class="p">(</span><span class="n">global_queue</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">t</span><span class="p">))</span> <span class="p">{</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">all_tasks_done</span><span class="p">())</span> <span class="k">break</span><span class="p">;</span>
+        <span class="n">backoff</span><span class="p">();</span>
+        <span class="k">continue</span><span class="p">;</span>
+    <span class="p">}</span>
+
+    <span class="k">for</span> <span class="n">each</span> <span class="n">input</span> <span class="n">edge</span><span class="o">:</span>
+        <span class="n">event_wait</span><span class="p">(</span><span class="n">edge</span><span class="p">.</span><span class="n">E</span><span class="p">,</span> <span class="n">eval_edge_map</span><span class="p">(</span><span class="n">edge</span><span class="p">,</span> <span class="n">t</span><span class="p">.</span><span class="n">coord</span><span class="p">));</span>
+
+    <span class="n">dispatch_task</span><span class="p">(</span><span class="n">t</span><span class="p">);</span>
+
+    <span class="k">for</span> <span class="n">each</span> <span class="n">output</span> <span class="n">edge</span><span class="o">:</span>
+        <span class="n">idx</span> <span class="o">=</span> <span class="n">eval_edge_map</span><span class="p">(</span><span class="n">edge</span><span class="p">,</span> <span class="n">t</span><span class="p">.</span><span class="n">coord</span><span class="p">);</span>
+        <span class="n">old</span> <span class="o">=</span> <span class="n">atomicSub</span><span class="p">(</span><span class="o">&amp;</span><span class="n">edge</span><span class="p">.</span><span class="n">E</span><span class="p">.</span><span class="n">counter</span><span class="p">[</span><span class="n">idx</span><span class="p">],</span> <span class="mi">1</span><span class="p">);</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">old</span> <span class="o">==</span> <span class="mi">1</span><span class="p">)</span> <span class="p">{</span>
+            <span class="n">push_consumers</span><span class="p">(</span><span class="n">edge</span><span class="p">.</span><span class="n">E</span><span class="p">,</span> <span class="n">idx</span><span class="p">);</span>
+        <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div></div> <p><code class="language-plaintext highlighter-rouge">push_consumers(E, idx)</code> needs an inverse mapping from event coordinates to consumer tasks. For static maps, precompute this inverse relation. For dynamic maps, compute it using runtime tensors.</p> <h3 id="step-6-implement-dispatch">Step 6: Implement Dispatch</h3> <p>A persistent kernel needs to dispatch among task kinds:</p> <div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">switch</span> <span class="p">(</span><span class="n">task</span><span class="p">.</span><span class="n">kind</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">case</span> <span class="n">TASK_Q_NORM</span><span class="p">:</span>
+        <span class="n">q_norm_tile</span><span class="p">(</span><span class="n">task</span><span class="p">.</span><span class="n">coord</span><span class="p">,</span> <span class="n">args</span><span class="p">...);</span>
+        <span class="k">break</span><span class="p">;</span>
+    <span class="k">case</span> <span class="n">TASK_ROPE</span><span class="p">:</span>
+        <span class="n">rope_tile</span><span class="p">(</span><span class="n">task</span><span class="p">.</span><span class="n">coord</span><span class="p">,</span> <span class="n">args</span><span class="p">...);</span>
+        <span class="k">break</span><span class="p">;</span>
+    <span class="k">case</span> <span class="n">TASK_GEMM</span><span class="p">:</span>
+        <span class="n">gemm_tile</span><span class="p">(</span><span class="n">task</span><span class="p">.</span><span class="n">coord</span><span class="p">,</span> <span class="n">args</span><span class="p">...);</span>
+        <span class="k">break</span><span class="p">;</span>
+    <span class="k">case</span> <span class="n">TASK_REDUCE_SCATTER</span><span class="p">:</span>
+        <span class="n">reduce_scatter_tile</span><span class="p">(</span><span class="n">task</span><span class="p">.</span><span class="n">coord</span><span class="p">,</span> <span class="n">args</span><span class="p">...);</span>
+        <span class="k">break</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div></div> <p>This is where operator kernels live. Event Tensor does not replace the need for good tile kernels. It coordinates them.</p> <h3 id="step-7-implement-shape-dynamism">Step 7: Implement Shape Dynamism</h3> <p>At compile time:</p> <div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">compile</span> <span class="n">persistent</span> <span class="n">kernel</span> <span class="k">with</span> <span class="n">symbolic</span> <span class="n">dimensions</span>
+</code></pre></div></div> <p>At runtime:</p> <div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">shape_env</span> <span class="o">=</span> <span class="p">{</span><span class="sh">"</span><span class="s">B</span><span class="sh">"</span><span class="p">:</span> <span class="n">actual_batch</span><span class="p">,</span> <span class="sh">"</span><span class="s">n</span><span class="sh">"</span><span class="p">:</span> <span class="n">actual_num_blocks</span><span class="p">}</span>
+<span class="n">materialize</span> <span class="n">event</span> <span class="n">counters</span> <span class="n">using</span> <span class="n">shape_env</span>
+<span class="n">materialize</span> <span class="n">static</span> <span class="n">queue</span> <span class="k">for</span> <span class="nb">next</span> <span class="n">larger</span> <span class="n">sampled</span> <span class="n">shape</span><span class="p">,</span> <span class="ow">or</span> <span class="n">dynamic</span> <span class="n">ready</span> <span class="n">tasks</span>
+<span class="n">launch</span> <span class="n">one</span> <span class="n">persistent</span> <span class="n">kernel</span>
+</code></pre></div></div> <p>For static scheduling, sample shape buckets:</p> <div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">sampled_B</span> <span class="o">=</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">8</span><span class="p">,</span> <span class="mi">16</span><span class="p">,</span> <span class="mi">32</span><span class="p">,</span> <span class="mi">64</span><span class="p">,</span> <span class="mi">128</span><span class="p">]</span>
+<span class="n">bucket</span> <span class="o">=</span> <span class="nf">min</span><span class="p">(</span><span class="n">x</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">sampled_B</span> <span class="k">if</span> <span class="n">x</span> <span class="o">&gt;=</span> <span class="n">actual_B</span><span class="p">)</span>
+<span class="n">use</span> <span class="n">schedule</span><span class="p">[</span><span class="n">bucket</span><span class="p">]</span>
+<span class="n">guard</span> <span class="n">tasks</span> <span class="n">whose</span> <span class="n">coordinates</span> <span class="n">exceed</span> <span class="n">actual_B</span>
+</code></pre></div></div> <p>For dynamic scheduling, seed the queue only with tasks valid under actual runtime shape.</p> <h3 id="step-8-implement-moe-dynamic-dependencies">Step 8: Implement MoE Dynamic Dependencies</h3> <p>Minimum MoE prototype:</p> <div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">topk</span> <span class="o">=</span> <span class="nf">router</span><span class="p">(</span><span class="n">tokens</span><span class="p">)</span>                  <span class="c1"># shape [num_tokens, top_k]
+</span><span class="n">exp_count</span> <span class="o">=</span> <span class="nf">histogram</span><span class="p">(</span><span class="n">topk</span><span class="p">)</span>            <span class="c1"># shape [num_experts]
+</span><span class="n">exp_indptr</span> <span class="o">=</span> <span class="nf">prefix_sum</span><span class="p">(</span><span class="nf">tile_count</span><span class="p">(</span><span class="n">exp_count</span><span class="p">))</span>
+</code></pre></div></div> <p>Event setup:</p> <div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">E_grouped</span> <span class="o">=</span> <span class="nc">EventTensor</span><span class="p">(</span>
+    <span class="sh">"</span><span class="s">E_grouped</span><span class="sh">"</span><span class="p">,</span>
+    <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="n">num_experts</span><span class="p">,),</span>
+    <span class="n">wait_count</span><span class="o">=</span><span class="k">lambda</span> <span class="n">e</span><span class="p">:</span> <span class="n">exp_count</span><span class="p">[</span><span class="n">e</span><span class="p">],</span>
+<span class="p">)</span>
+</code></pre></div></div> <p>Tasks:</p> <div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>route/group task:
+  coordinate: token_id
+  output event: E_grouped[topk[token_id, k]]
+
+groupgemm task:
+  coordinate: tile_id
+  input event: E_grouped[expert_of_tile(tile_id)]
+</code></pre></div></div> <p>Trigger:</p> <div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">def</span> <span class="nf">consumers_of_E_grouped</span><span class="p">(</span><span class="n">e</span><span class="p">):</span>
+    <span class="k">return</span> <span class="p">[</span>
+        <span class="nc">Task</span><span class="p">(</span><span class="n">kind</span><span class="o">=</span><span class="n">GROUPGEMM</span><span class="p">,</span> <span class="n">coord</span><span class="o">=</span><span class="n">tile</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">tile</span> <span class="ow">in</span> <span class="nf">range</span><span class="p">(</span><span class="n">exp_indptr</span><span class="p">[</span><span class="n">e</span><span class="p">],</span> <span class="n">exp_indptr</span><span class="p">[</span><span class="n">e</span> <span class="o">+</span> <span class="mi">1</span><span class="p">])</span>
+    <span class="p">]</span>
+</code></pre></div></div> <p>Correctness checks:</p> <ul> <li>every routed token is grouped exactly once per selected expert;</li> <li><code class="language-plaintext highlighter-rouge">sum(exp_count) == num_tokens * top_k</code>;</li> <li>every GroupGEMM tile belongs to exactly one expert;</li> <li>scatter uses the inverse permutation from grouping.</li> </ul> <h3 id="step-9-add-weight-prefetching">Step 9: Add Weight Prefetching</h3> <p>The paper says ETC generates weight-prefetching functions based on user annotations. The idea:</p> <div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>If a task is known before its input activation is ready,
+the worker can prefetch the task's weights while waiting on input events.
+</code></pre></div></div> <p>Implementation pattern:</p> <div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">Task</span> <span class="n">t</span> <span class="o">=</span> <span class="n">get_next_task</span><span class="p">();</span>
+
+<span class="n">prefetch_weights</span><span class="p">(</span><span class="n">t</span><span class="p">);</span>
+
+<span class="k">for</span> <span class="n">dep</span> <span class="n">in</span> <span class="n">t</span><span class="p">.</span><span class="n">input_events</span><span class="o">:</span>
+    <span class="n">event_wait</span><span class="p">(</span><span class="n">dep</span><span class="p">);</span>
+
+<span class="n">run_tile</span><span class="p">(</span><span class="n">t</span><span class="p">);</span>
+</code></pre></div></div> <p>This is especially useful when the schedule knows a GEMM tile’s weight block before the activation tile is produced.</p> <h2 id="minimal-correctness-tests">Minimal Correctness Tests</h2> <p>An LLM agent trying to reproduce the system should start with these tests.</p> <h3 id="test-1-split-row-sum">Test 1: Split Row Sum</h3> <p>Goal:</p> <div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>partial_sum(i, j) -&gt; E[i] -&gt; final_sum(i)
+</code></pre></div></div> <p>Checks:</p> <ul> <li>Output equals a reference row sum.</li> <li><code class="language-plaintext highlighter-rouge">final_sum(i)</code> can run before <code class="language-plaintext highlighter-rouge">partial_sum(i+1, *)</code> completes.</li> <li>No <code class="language-plaintext highlighter-rouge">final_sum(i)</code> runs before all four partial sums for <code class="language-plaintext highlighter-rouge">i</code> complete.</li> </ul> <h3 id="test-2-static-gemm--reduce-scatter-mock">Test 2: Static GEMM + Reduce-Scatter Mock</h3> <p>Use fake tile functions first:</p> <div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>MM tile sleeps/spins for compute time
+RS tile sleeps/spins for communication time
+</code></pre></div></div> <p>Check:</p> <ul> <li>RS tile starts as soon as its dependent MM tiles finish.</li> <li>MM and RS tasks overlap on different SMs.</li> <li>Static queue preserves correctness.</li> </ul> <p>Then replace fake tiles with real GEMM and communication.</p> <h3 id="test-3-dynamic-queue-load-balancing">Test 3: Dynamic Queue Load Balancing</h3> <p>Create tasks with variable runtime:</p> <div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>some experts get many tokens
+some experts get few tokens
+</code></pre></div></div> <p>Check:</p> <ul> <li>dynamic scheduler reduces idle time compared with static schedule;</li> <li>queue operations do not lose or duplicate tasks;</li> <li>all tasks complete exactly once.</li> </ul> <h3 id="test-4-moe-routing">Test 4: MoE Routing</h3> <p>Use a small MoE:</p> <div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>num_tokens = 8
+num_experts = 4
+top_k = 2
+</code></pre></div></div> <p>Check:</p> <ul> <li><code class="language-plaintext highlighter-rouge">exp_count</code> matches <code class="language-plaintext highlighter-rouge">topk</code>;</li> <li>event counters initialize from <code class="language-plaintext highlighter-rouge">exp_count</code>;</li> <li>expert GroupGEMM tasks triggered from <code class="language-plaintext highlighter-rouge">exp_indptr</code>;</li> <li>final output matches a normal multi-kernel MoE reference.</li> </ul> <h3 id="test-5-dynamic-shape-buckets">Test 5: Dynamic Shape Buckets</h3> <p>For static scheduling:</p> <div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>compile buckets B = [1, 2, 4, 8]
+run actual B = 3 using bucket 4
+guard invalid tasks
+</code></pre></div></div> <p>Check:</p> <ul> <li>output matches reference;</li> <li>tasks for invalid coordinates do not touch memory;</li> <li>no deadlock occurs from counters expecting invalid producers.</li> </ul> <p>This last point is subtle. If a bucket schedule contains more tasks than the actual shape, counter initialization must match the actual shape, or invalid producer tasks must still perform dummy notifies. The cleaner design is to guard both task execution and counter counts from the same runtime shape.</p> <h2 id="evaluation-summary">Evaluation Summary</h2> <p>The paper evaluates ETC on a server with:</p> <ul> <li>8 NVIDIA B200 GPUs connected by NVLink;</li> <li>Ubuntu 24.04;</li> <li>PyTorch 2.8.0;</li> <li>CUDA 13.0;</li> <li>NVIDIA driver 580.82.07.</li> </ul> <p>The baselines include deep learning compilers, specialized libraries, and serving systems. The paper notes that existing megakernel frameworks mainly target single-batch inference and cannot be fairly compared on dynamic-shape or data-dependent workloads.</p> <h3 id="fused-communication-and-computation">Fused Communication And Computation</h3> <p>Workloads:</p> <ul> <li>GEMM + Reduce-Scatter;</li> <li>All-Gather + GEMM;</li> <li>tensor parallel size 8;</li> <li>8192 tokens;</li> <li>MLP configurations derived from Qwen3, LLaMA, Gemma, GPT-3, and related model sizes.</li> </ul> <p>Baselines:</p> <ul> <li>cuBLAS + NCCL sequential execution;</li> <li>TP-Async;</li> <li>Triton Distributed v0.0.2-rc;</li> <li>cuBLASMp.</li> </ul> <p>Scheduling choices:</p> <ul> <li>GEMM + Reduce-Scatter uses dynamic scheduling because communication latency can be unpredictable.</li> <li>All-Gather + GEMM uses static scheduling because ring all-gather has predictable data arrival and DMA does not consume SM compute in the same way.</li> </ul> <p>Headline result:</p> <ul> <li>ETC achieves up to 1.40x speedup over the cuBLAS + NCCL baseline for both workloads.</li> </ul> <p>The claimed reason is fine-grained overlap. Event Tensor lets the compiler break monolithic operations into tile dependencies, so compute and communication resources remain busy instead of waiting at kernel boundaries.</p> <h3 id="moe-layer">MoE Layer</h3> <p>Workload:</p> <ul> <li>complete MoE layer from Qwen3-30B-A3B;</li> <li>128 experts;</li> <li>top-k 8;</li> <li>variable token counts;</li> <li>single B200.</li> </ul> <p>Baselines:</p> <ul> <li>Triton 3.4.0 MoE implementation;</li> <li>FlashInfer 0.2.14.post1.</li> </ul> <p>Scheduling:</p> <ul> <li>ETC uses dynamic scheduling because routing creates irregular task durations and load imbalance.</li> </ul> <p>Headline result:</p> <ul> <li>up to 1.23x speedup over the best baseline at 1024 tokens.</li> </ul> <p>The important part is not just the number. The MoE experiment tests the core data-dependent Event Tensor claim: the whole MoE dataflow can be fused into one megakernel even though routing decisions are runtime values.</p> <h3 id="end-to-end-low-batch-serving">End-To-End Low-Batch Serving</h3> <p>Workloads:</p> <ul> <li>Qwen3-30B-A3B MoE model;</li> <li>Qwen3-32B dense model;</li> <li>Qwen3-32B with tensor parallelism TP=4.</li> </ul> <p>Benchmark setup:</p> <ul> <li>decoding stage;</li> <li>synthetic dataset;</li> <li>prefill length 512;</li> <li>generate 100 output tokens;</li> <li>batch sizes 1 to 128;</li> <li>metric is time per output token, TPOT.</li> </ul> <p>Baselines:</p> <ul> <li>vLLM v0.11.0rc2;</li> <li>SGLang v0.5.3rc0;</li> <li>both use CUDA Graph and torch.compile-style optimizations.</li> </ul> <p>Headline results:</p> <ul> <li>Qwen3-30B-A3B: 1.48x speedup over vLLM and 1.20x over SGLang at batch size 1.</li> <li>Qwen3-32B single GPU: up to 1.15x over vLLM at batch size 1, and up to 1.09x over SGLang at batch size 64.</li> <li>Qwen3-32B TP=4: ETC matches vLLM with speedups from 0.99x to 1.06x; SGLang is faster in some cases due to its optimized CPU scheduler.</li> </ul> <p>The paper says ETC’s compiled megakernels cover the full decoding pipeline: Attention, RoPE, KV-cache, Norm, MLP, and MoE, not just GEMM.</p> <p>The specific optimizations enabled by removing kernel boundaries:</p> <ul> <li>Q’s Norm + RoPE can run concurrently with K’s Norm + RoPE + CacheAppend.</li> <li>GroupGEMM stages in MoE can be pipelined.</li> <li>GEMM stages in MLP can be pipelined.</li> <li>Weight prefetching can begin before input activations are ready.</li> <li>Wave quantization is reduced because SMs are assigned work more smoothly across fused operators.</li> </ul> <h3 id="warmup-overhead">Warmup Overhead</h3> <p>The paper measures engine warmup time for Qwen3-32B, including engine initialization, model loading, JIT compilation, and CUDA Graph capture.</p> <table> <thead> <tr> <th>Method</th> <th style="text-align: right">Warmup Time</th> <th style="text-align: right">Number Of JIT Graph Captures</th> </tr> </thead> <tbody> <tr> <td>SGLang JIT</td> <td style="text-align: right">583 s</td> <td style="text-align: right">51</td> </tr> <tr> <td>vLLM JIT</td> <td style="text-align: right">123 s</td> <td style="text-align: right">67</td> </tr> <tr> <td>ETC AOT</td> <td style="text-align: right">35 s</td> <td style="text-align: right">0</td> </tr> </tbody> </table> <p>ETC also has an offline compilation time of 107 s for Qwen3-32B, but that is not repeated at serving startup. The reason this works is symbolic-shape Event Tensor support: one precompiled shape-generic megakernel can cover dynamic runtime shapes.</p> <h3 id="static-vs-dynamic-scheduling">Static vs Dynamic Scheduling</h3> <p>The paper compares static and dynamic scheduling against an unfused megakernel baseline. The unfused baseline uses the same operator code, but inserts a global synchronization-style event between stages. Therefore the speedups isolate the value of fine-grained Event Tensor dependencies rather than better operator kernels.</p> <p>MoE layer, relative to unfused megakernel:</p> <table> <thead> <tr> <th style="text-align: right">Tokens</th> <th style="text-align: right">Static</th> <th style="text-align: right">Dynamic</th> </tr> </thead> <tbody> <tr> <td style="text-align: right">1</td> <td style="text-align: right">1.03</td> <td style="text-align: right">0.95</td> </tr> <tr> <td style="text-align: right">128</td> <td style="text-align: right">1.02</td> <td style="text-align: right">1.06</td> </tr> <tr> <td style="text-align: right">1024</td> <td style="text-align: right">1.04</td> <td style="text-align: right">1.08</td> </tr> <tr> <td style="text-align: right">4096</td> <td style="text-align: right">1.02</td> <td style="text-align: right">1.03</td> </tr> </tbody> </table> <p>Qwen3-32B TP=4, relative to unfused megakernel:</p> <table> <thead> <tr> <th style="text-align: right">Batch Size</th> <th style="text-align: right">Static</th> <th style="text-align: right">Dynamic</th> </tr> </thead> <tbody> <tr> <td style="text-align: right">1</td> <td style="text-align: right">1.09</td> <td style="text-align: right">0.83</td> </tr> <tr> <td style="text-align: right">16</td> <td style="text-align: right">1.06</td> <td style="text-align: right">0.82</td> </tr> <tr> <td style="text-align: right">32</td> <td style="text-align: right">1.07</td> <td style="text-align: right">0.85</td> </tr> <tr> <td style="text-align: right">128</td> <td style="text-align: right">1.06</td> <td style="text-align: right">0.89</td> </tr> </tbody> </table> <p>Interpretation:</p> <ul> <li>Dynamic scheduling helps irregular MoE once token count is large enough to amortize scheduler overhead.</li> <li>Static scheduling wins on regular dense distributed decode because dynamic queue overhead is too high, especially for remote task queues.</li> <li>Supporting both strategies in one compiler framework is therefore useful.</li> </ul> <h2 id="what-is-actually-new">What Is Actually New?</h2> <p>I think the novelty is easy to misunderstand, so here is the sharp version.</p> <p>Not new by itself:</p> <ul> <li>persistent kernels;</li> <li>semaphore counters;</li> <li>spin-wait synchronization;</li> <li>GPU task queues;</li> <li>static per-SM schedules;</li> <li>dynamic work queues;</li> <li>CUDA Graph alternatives;</li> <li>operator fusion.</li> </ul> <p>New contribution:</p> <div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Represent fine-grained task synchronization as symbolic-shaped tensors in compiler IR,
+then lower that representation into static or dynamic persistent megakernel schedules,
+including data-dependent event updates and triggers.
+</code></pre></div></div> <p>The Event Tensor is an abstraction that makes existing mechanisms composable and compiler-generatable.</p> <p>The difference is similar to the difference between:</p> <div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>manual CUDA shared-memory programming
+</code></pre></div></div> <p>and</p> <div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>a compiler IR that explicitly represents memory scopes and layouts
+</code></pre></div></div> <p>The low-level mechanisms may already exist, but the IR decides whether a compiler can reason about them systematically.</p> <h2 id="limitations-and-open-questions">Limitations And Open Questions</h2> <h3 id="the-compiler-starts-from-tiled-operators">The Compiler Starts From Tiled Operators</h3> <p>ETC assumes operators are already partitioned into CTA-level tasks, either user-specified through a DSL or provided as compiler builtins. Automatically generating optimal Event Tensor graphs from arbitrary model graphs is future work.</p> <p>This means a full reproduction still needs a good tile-kernel layer:</p> <ul> <li>GEMM tiles;</li> <li>attention tiles;</li> <li>RoPE and Norm tiles;</li> <li>GroupGEMM tiles;</li> <li>communication tiles.</li> </ul> <p>Event Tensor coordinates them, but does not remove the need to implement them.</p> <h3 id="static-scheduling-is-conservative-for-dynamism">Static Scheduling Is Conservative For Dynamism</h3> <p>The paper’s static scheduling support for data-dependent dynamism can fall back to conservative synchronization such as rewriting dependencies to <code class="language-plaintext highlighter-rouge">E[0]</code>. This preserves correctness but can lose parallelism.</p> <p>This is probably why dynamic scheduling is important for MoE.</p> <h3 id="dynamic-scheduling-uses-a-centralized-queue">Dynamic Scheduling Uses A Centralized Queue</h3> <p>The paper says the implementation uses a centralized global-memory queue for simplicity. This may become a bottleneck at larger scale or with very small tasks.</p> <p>Potential future improvements:</p> <ul> <li>per-SM queues;</li> <li>per-cluster queues;</li> <li>work stealing;</li> <li>hierarchical schedulers;</li> <li>specialized queue layouts for predictable producer-consumer patterns.</li> </ul> <h3 id="memory-ordering-details-are-crucial">Memory Ordering Details Are Crucial</h3> <p>The paper describes notify/wait with integer counters and atomics, but a robust reproduction must be careful about memory consistency.</p> <p>A producer must make its output data visible before the event reaches zero. A consumer must not read produced data before acquiring the completed event.</p> <p>This is easy to get wrong in CUDA, especially if different CTAs or SMs communicate through global memory.</p> <h3 id="evaluation-is-strong-but-hardware-specific">Evaluation Is Strong But Hardware-Specific</h3> <p>The main experiments use B200 GPUs. The abstraction is not B200-specific, but performance trade-offs are hardware-dependent:</p> <ul> <li>atomic cost;</li> <li>queue contention;</li> <li>copy engine behavior;</li> <li>tensor core shape support;</li> <li>NVLink and multimem behavior;</li> <li>SM count and occupancy constraints.</li> </ul> <p>Replication on H100 or A100 should preserve the idea, but not necessarily the same speedups.</p> <h3 id="operator-quality-still-matters">Operator Quality Still Matters</h3> <p>The paper notes some cases where ETC trails the best baseline due to engineering factors, such as compiler-generated GEMM tiles being less tuned than cuBLAS and CPU-side overhead in the serving engine.</p> <p>This is important. A megakernel compiler can expose more overlap, but poor tile kernels can erase the benefit.</p> <h2 id="my-take">My Take</h2> <p>This paper is interesting because it identifies a clean compiler abstraction for a messy systems problem.</p> <p>Manual megakernels are powerful but painful. CUDA Graphs are practical but too coarse. Event Tensor sits between them:</p> <div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>fine-grained enough:
+  tile-level dependencies, task overlap, dynamic MoE routing
+
+structured enough:
+  tensor-shaped IR, symbolic dimensions, compiler transformations
+
+low-level enough:
+  lowers to counters, queues, persistent kernels
+</code></pre></div></div> <p>The abstraction also fits a bigger trend: LLM serving wants less CPU involvement and more device-side autonomy. MPK-style systems and other megakernel efforts show that one persistent kernel can remove launch overhead. Event Tensor asks the next compiler question: how do we make this programmable and dynamic enough for real serving workloads?</p> <p>For me, the most valuable idea is not “use a counter.” It is:</p> <div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Make synchronization tensor-shaped.
+</code></pre></div></div> <p>Once dependencies are shaped like tensors, symbolic shape compilation, dynamic indexing, and task graph transformations become natural compiler problems instead of bespoke CUDA engineering.</p> <h2 id="checklist-for-an-llm-agent-reimplementation">Checklist For An LLM Agent Reimplementation</h2> <p>If an LLM agent had to replicate a small version from this note only, it should implement in this order:</p> <ol> <li>Implement <code class="language-plaintext highlighter-rouge">EventTensor</code>, <code class="language-plaintext highlighter-rouge">TaskGrid</code>, <code class="language-plaintext highlighter-rouge">EdgeMap</code>, and <code class="language-plaintext highlighter-rouge">GraphFunc</code>.</li> <li>Support static edge maps like <code class="language-plaintext highlighter-rouge">"ij-&gt;i"</code> using simple coordinate projection.</li> <li>Lower Event Tensors to integer counters.</li> <li>Implement <code class="language-plaintext highlighter-rouge">notify</code> and <code class="language-plaintext highlighter-rouge">wait</code> with conservative atomics and fences.</li> <li>Build a static round-robin per-SM task queue.</li> <li>Emit a persistent kernel that loops through the static queue.</li> <li>Validate on split row sum.</li> <li>Add a dynamic global ready queue.</li> <li>Push consumer tasks when event counters reach zero.</li> <li>Validate on variable-duration fake tasks.</li> <li>Add runtime edge maps using tensors such as <code class="language-plaintext highlighter-rouge">topk</code> and <code class="language-plaintext highlighter-rouge">exp_indptr</code>.</li> <li>Validate on a toy MoE layer.</li> <li>Add static shape buckets and runtime guards.</li> <li>Add weight prefetch hooks before event waits.</li> <li>Replace fake tile functions with real GEMM, communication, attention, and MoE kernels.</li> <li>Compare against kernel-by-kernel and CUDA Graph baselines.</li> <li>Measure both raw GPU time and end-to-end serving TPOT.</li> <li>Add ablations against an unfused megakernel using identical tile code.</li> </ol> <p>The core thing to preserve is this invariant:</p> <div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Every consumer task must wait for exactly the Event Tensor elements
+that cover the producer tasks whose data it reads.
+</code></pre></div></div> <p>Everything else, static queues, dynamic queues, prefetching, and shape buckets, is an optimization around that invariant.</p>]]></content><author><name></name></author><category term="paper-reading"/><category term="paper-reading"/><category term="mlsys"/><category term="gpu"/><category term="compiler"/><category term="megakernel"/><category term="llm-inference"/><summary type="html"><![CDATA[Detailed notes on Event Tensor, a compiler abstraction for dynamic GPU megakernels with symbolic-shape and data-dependent task dependencies.]]></summary></entry><entry><title type="html">Inside Mirage (3) - Megakernel Persistent Runtime</title><link href="https://uv-xiao.github.io/blog/2025/mirage-mpk-runtime/" rel="alternate" type="text/html" title="Inside Mirage (3) - Megakernel Persistent Runtime"/><published>2025-12-27T00:00:00+00:00</published><updated>2025-12-27T00:00:00+00:00</updated><id>https://uv-xiao.github.io/blog/2025/mirage-mpk-runtime</id><content type="html" xml:base="https://uv-xiao.github.io/blog/2025/mirage-mpk-runtime/"><![CDATA[<p>This post continues our exploration of <a href="https://github.com/mirage-project/mirage">Mirage</a>, diving into the <strong>Megakernel Persistent Kernel (MPK)</strong> runtime that powers high-performance LLM inference. If the <a href="/blog/2025/mirage-transpiler-cuda/">previous post on the transpiler</a> showed you <em>what</em> code gets generated, this post shows you <em>how</em> that code executes.</p> <blockquote> <p><strong>Related reading:</strong> Check out my <a href="/blog/2025/mirage-mpk-paper/">MPK paper summary</a> for the high-level ideas behind this architecture.</p> </blockquote> <hr/> <h2 id="1-the-megakernel-execution-model">1. The Megakernel Execution Model</h2> <p>Traditional CUDA programming launches separate kernels for each operation. Mirage’s megakernel takes a radically different approach: <strong>launch once, run forever</strong>.</p> <div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Traditional Model:
 +--------+     +--------+     +--------+
 |Kernel 1|-&gt;CPU|Kernel 2|-&gt;CPU|Kernel 3|-&gt; ...
 +--------+     +--------+     +--------+
