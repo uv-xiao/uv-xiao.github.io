@@ -1,0 +1,54 @@
+.hcards {
+  margin: 2rem 0;
+}
+
+.hcards__title {
+  margin: 0 0 0.75rem;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--global-text-color);
+}
+
+.hcards__rail {
+  display: flex;
+  gap: 1rem;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x proximity;
+  padding: 0.125rem 0 1rem;
+  scrollbar-width: thin;
+}
+
+.hcards__rail:focus {
+  outline: 2px solid var(--global-theme-color);
+  outline-offset: 4px;
+}
+
+.hcard {
+  flex: 0 0 min(23rem, 86vw);
+  scroll-snap-align: start;
+  border: 1px solid var(--global-divider-color);
+  border-radius: 8px;
+  background: var(--global-card-bg-color);
+  padding: 1rem;
+  min-height: 14rem;
+}
+
+.hcard__title {
+  margin: 0 0 0.75rem;
+  font-size: 1rem;
+  line-height: 1.35;
+}
+
+.hcard__body {
+  font-size: 0.92rem;
+  line-height: 1.55;
+}
+
+.hcard__body > :last-child {
+  margin-bottom: 0;
+}
+
+.hcard pre {
+  white-space: pre-wrap;
+}
