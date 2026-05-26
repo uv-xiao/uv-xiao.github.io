@@ -1,4 +1,499 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en"><generator uri="https://jekyllrb.com/" version="4.3.4">Jekyll</generator><link href="https://uv-xiao.github.io/feed.xml" rel="self" type="application/atom+xml"/><link href="https://uv-xiao.github.io/" rel="alternate" type="text/html" hreflang="en"/><updated>2026-04-22T02:04:04+00:00</updated><id>https://uv-xiao.github.io/feed.xml</id><title type="html">Youwei Xiao</title><subtitle>Ph.D. candidate at Peking University. Research on compilers, DSLs, and hardware-software co-design for MLSys and EDA. </subtitle><entry><title type="html">(Paper Reading) Event Tensor: A Unified Abstraction for Compiling Dynamic Megakernel</title><link href="https://uv-xiao.github.io/blog/2026/event-tensor-dynamic-megakernel/" rel="alternate" type="text/html" title="(Paper Reading) Event Tensor: A Unified Abstraction for Compiling Dynamic Megakernel"/><published>2026-04-21T00:00:00+00:00</published><updated>2026-04-21T00:00:00+00:00</updated><id>https://uv-xiao.github.io/blog/2026/event-tensor-dynamic-megakernel</id><content type="html" xml:base="https://uv-xiao.github.io/blog/2026/event-tensor-dynamic-megakernel/"><![CDATA[<pre><code class="language-txt">@misc{jin2026eventtensor,
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en"><generator uri="https://jekyllrb.com/" version="4.3.4">Jekyll</generator><link href="https://uv-xiao.github.io/feed.xml" rel="self" type="application/atom+xml"/><link href="https://uv-xiao.github.io/" rel="alternate" type="text/html" hreflang="en"/><updated>2026-05-26T04:31:05+00:00</updated><id>https://uv-xiao.github.io/feed.xml</id><title type="html">Youwei Xiao</title><subtitle>Ph.D. candidate at Peking University. Research on compilers, DSLs, and hardware-software co-design for MLSys and EDA. </subtitle><entry><title type="html">Agent Harness, Part 1: Workflow Mechanisms in Humanize h1 and Codex</title><link href="https://uv-xiao.github.io/blog/2026/agent-harness-workflows/" rel="alternate" type="text/html" title="Agent Harness, Part 1: Workflow Mechanisms in Humanize h1 and Codex"/><published>2026-05-26T00:00:00+00:00</published><updated>2026-05-26T00:00:00+00:00</updated><id>https://uv-xiao.github.io/blog/2026/agent-harness-workflows</id><content type="html" xml:base="https://uv-xiao.github.io/blog/2026/agent-harness-workflows/"><![CDATA[<p>This is the first post in a planned series about agent harnesses. The series is broader than workflow, but workflow is the right first mechanism to study because it is where long-running agent work becomes visible as state, gates, handoffs, and evidence.</p> <p>The question is practical:</p> <blockquote> <p>If a coding agent can already edit files, run commands, and respond to feedback, what does an agent harness add?</p> </blockquote> <p>The short answer is that a harness turns a one-turn assistant into a controlled work system. It gives the agent a durable objective, scoped tools, evidence requirements, review boundaries, lifecycle events, and recovery behavior when the work drifts.</p> <p>This post studies two concrete systems:</p> <ol> <li><strong>Humanize h1 RLCR</strong>: a workflow-oriented harness that wraps a builder agent with plans, round contracts, stop hooks, reviewer pressure, memory deltas, drift recovery, and methodology analysis.</li> <li><strong>Codex review and goals</strong>: two narrower but very clean mechanisms: review as a bounded service, and goals as a persistent thread-level objective contract with runtime policy.</li> </ol> <p>The goal of the post is not to praise either system. It is to make their mechanisms reproducible. If you had to rebuild the useful parts from scratch, this should tell you what objects, state files, prompts, gates, and event transitions you would need.</p> <p>The final section then asks why an outside framework such as Puppeteer is still useful. That discussion is intentionally kept separate from the case studies: first we understand the systems as they are; only then do we extract design pressure for Puppeteer.</p> <h2 id="sources">Sources</h2> <p>This post is based on two in-progress mechanism studies in the Puppeteer repo:</p> <ul> <li><code class="language-plaintext highlighter-rouge">docs/in_progress/design/case_study_humanize_h1_workflow.md</code></li> <li><code class="language-plaintext highlighter-rouge">docs/in_progress/design/case_study_codex_review_goal_workflows.md</code></li> </ul> <p>Those studies inspect:</p> <ul> <li>Humanize h1 source at <code class="language-plaintext highlighter-rouge">tmp/repos/humanize</code></li> <li>Humanize workflow presentation at <code class="language-plaintext highlighter-rouge">tmp/articles/humanize-workflow.pdf</code></li> <li>Codex source at <code class="language-plaintext highlighter-rouge">tmp/repos/codex</code></li> <li>OpenAI Cookbook notebook: <code class="language-plaintext highlighter-rouge">tmp/articles/using_goals_in_codex.ipynb</code></li> </ul> <p>The explanations below are self-contained. They paraphrase and simplify the source mechanisms so the reader does not need to open those files to understand the architecture.</p> <h2 id="a-working-definition-of-harness">A Working Definition Of Harness</h2> <p>An <strong>agent harness</strong> is not just a prompt template.</p> <p>It is the system around the agent that answers questions like:</p> <ul> <li>What is the durable objective?</li> <li>What evidence proves the objective is done?</li> <li>What tools and files may the agent touch?</li> <li>What must happen before the agent is allowed to stop?</li> <li>What should be reviewed by another model or by deterministic checks?</li> <li>What happens when the agent drifts from the original goal?</li> <li>How are state, traces, summaries, failures, and lessons preserved?</li> </ul> <p>In workflow language, a harness looks like steps. In implementation, the useful pieces are more varied:</p> <div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Objective state
+  durable goal, plan, acceptance criteria, budget, lifecycle status
+
+Evidence surfaces
+  tests, benchmarks, diffs, summaries, artifacts, claim ledgers
+
+Agent adapters
+  builder, reviewer, analysis agent, sub-agent, one-shot service
+
+Gates
+  deterministic checks before model judgement
+
+Review services
+  scoped model judgement with narrower capabilities
+
+Runtime policy
+  continuation, budget handling, recovery, stop behavior
+
+Trace
+  events, summaries, review output, state transitions, methodology notes
+</code></pre></div></div> <p>That distinction matters because “workflow” is not always the right root abstraction. Sometimes the harness really is a workflow. Sometimes it is a service call. Sometimes it is persisted state plus event-driven runtime logic.</p> <h2 id="website-card-syntax-needed">Website Card Syntax Needed</h2> <p>This post uses mechanism cards heavily. The website should support horizontally scrolled card decks so a long mechanism set can stay readable without turning the page into a tall wall of repeated headings.</p> <p>Proposed Liquid syntax:</p> <div class="language-liquid highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">{%</span><span class="w"> </span><span class="nt">hcards</span><span class="w"> </span><span class="na">title</span><span class="o">=</span><span class="s2">"Humanize h1 mechanism deck"</span><span class="w"> </span><span class="cp">%}</span>
+<span class="cp">{%</span><span class="w"> </span><span class="nt">hcard</span><span class="w"> </span><span class="na">id</span><span class="o">=</span><span class="s2">"h1-01"</span><span class="w"> </span><span class="na">title</span><span class="o">=</span><span class="s2">"Plan pre-check and quiz"</span><span class="w"> </span><span class="cp">%}</span>
+Card body in Markdown.
+<span class="cp">{%</span><span class="w"> </span><span class="nt">endhcard</span><span class="w"> </span><span class="cp">%}</span>
+<span class="cp">{%</span><span class="w"> </span><span class="nt">hcard</span><span class="w"> </span><span class="na">id</span><span class="o">=</span><span class="s2">"h1-02"</span><span class="w"> </span><span class="na">title</span><span class="o">=</span><span class="s2">"Inspectable loop state"</span><span class="w"> </span><span class="cp">%}</span>
+Card body in Markdown.
+<span class="cp">{%</span><span class="w"> </span><span class="nt">endhcard</span><span class="w"> </span><span class="cp">%}</span>
+<span class="cp">{%</span><span class="w"> </span><span class="nt">endhcards</span><span class="w"> </span><span class="cp">%}</span>
+</code></pre></div></div> <p>Expected rendering:</p> <ul> <li><code class="language-plaintext highlighter-rouge">hcards</code> renders a full-width horizontally scrollable region.</li> <li>Each <code class="language-plaintext highlighter-rouge">hcard</code> renders a fixed-width card with stable height rules and normal Markdown inside.</li> <li>Cards should be keyboard-scrollable and usable on mobile.</li> <li>The deck should not require icons.</li> <li>The syntax should degrade cleanly if CSS fails: card contents remain readable in source order.</li> </ul> <p>The draft below uses this future syntax in two card decks. The website repo will need a small Liquid block plugin and Sass before this draft can be copied directly into <code class="language-plaintext highlighter-rouge">_posts</code>.</p> <h2 id="case-study-1-humanize-h1-rlcr">Case Study 1: Humanize h1 RLCR</h2> <p>Humanize h1 is easiest to understand as a judgement loop.</p> <p>It is not “many agents doing work.” It is one builder under pressure from a plan, a state directory, stop hooks, a reviewer, memory discipline, and final methodology analysis.</p> <p>The loop’s core idea is:</p> <div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>human plan
+  -&gt; setup durable loop state
+  -&gt; builder works one round
+  -&gt; deterministic stop hook checks cheap invariants
+  -&gt; Codex reviews the builder's summary
+  -&gt; if incomplete, next round prompt narrows the work
+  -&gt; if complete, Codex reviews the final diff
+  -&gt; if clean, methodology analysis critiques the loop itself
+</code></pre></div></div> <h3 id="humanize-reproduction-model">Humanize Reproduction Model</h3> <p>To reproduce the useful part of Humanize h1, implement these objects:</p> <table> <thead> <tr> <th>Object</th> <th>Purpose</th> <th>Durable Location</th> </tr> </thead> <tbody> <tr> <td>Plan</td> <td>Original work scope and acceptance anchor.</td> <td>User-provided Markdown plan.</td> </tr> <tr> <td>State file</td> <td>Round, budget, base commit, model config, drift counters.</td> <td><code class="language-plaintext highlighter-rouge">.humanize/rlcr/&lt;timestamp&gt;/state.md</code></td> </tr> <tr> <td>Goal tracker</td> <td>Immutable goal plus mutable work board.</td> <td><code class="language-plaintext highlighter-rouge">.humanize/rlcr/&lt;timestamp&gt;/goal-tracker.md</code></td> </tr> <tr> <td>Round contract</td> <td>One local mainline objective per round.</td> <td><code class="language-plaintext highlighter-rouge">.humanize/rlcr/&lt;timestamp&gt;/round-N-contract.md</code></td> </tr> <tr> <td>Round summary</td> <td>Builder’s evidence packet for the reviewer.</td> <td><code class="language-plaintext highlighter-rouge">.humanize/rlcr/&lt;timestamp&gt;/round-N-summary.md</code></td> </tr> <tr> <td>Review result</td> <td>Codex summary review output.</td> <td><code class="language-plaintext highlighter-rouge">.humanize/rlcr/&lt;timestamp&gt;/round-N-review-result.md</code></td> </tr> <tr> <td>Review phase marker</td> <td>Marks transition from implementation to code review.</td> <td><code class="language-plaintext highlighter-rouge">.humanize/rlcr/&lt;timestamp&gt;/.review-phase-started</code></td> </tr> <tr> <td>Methodology report</td> <td>Post-run critique of the harness method.</td> <td><code class="language-plaintext highlighter-rouge">.humanize/rlcr/&lt;timestamp&gt;/methodology-analysis-report.md</code></td> </tr> </tbody> </table> <p>The important design choice is that these are not chat memories. They are files that hooks and agents can inspect. A new turn can recover the loop state by reading the directory.</p> <h3 id="humanize-control-flow">Humanize Control Flow</h3> <pre><code class="language-mermaid">flowchart TD
+  Plan[Human plan] --&gt; Precheck[Plan compliance check]
+  Precheck --&gt; Quiz[Optional understanding quiz]
+  Quiz --&gt; Setup[setup-rlcr-loop.sh]
+  Setup --&gt; Tracker[goal-tracker.md]
+  Setup --&gt; State[state.md]
+  Setup --&gt; Contract[round-0-contract.md]
+  Contract --&gt; Builder[Builder agent]
+  Builder --&gt; Summary[round-N-summary.md]
+  Builder --&gt; Stop[Stop attempt]
+  Stop --&gt; Hook[Stop hook]
+
+  Hook --&gt; Cheap{Cheap gates pass?}
+  Cheap -- no --&gt; Block[Block with specific instruction]
+  Block --&gt; Builder
+  Cheap -- yes --&gt; Review[Codex summary review]
+
+  Review -- findings --&gt; NextRound[next-round prompt]
+  NextRound --&gt; Contract
+  Review -- COMPLETE --&gt; DiffReview[codex review --base]
+  DiffReview -- priority findings --&gt; ReviewFix[review-fix prompt]
+  ReviewFix --&gt; Builder
+  DiffReview -- clean --&gt; Methodology[methodology analysis]
+  Methodology --&gt; Terminal[complete / stop / maxiter state]
+</code></pre> <p>The loop uses two different reviewers:</p> <ol> <li><strong>Implementation review</strong> checks whether the builder’s claimed progress proves the original plan is done.</li> <li><strong>Diff review</strong> checks whether the actual final patch has blocking code review findings.</li> </ol> <p>Those are different questions. The first is about plan completion. The second is about patch correctness.</p> <h3 id="start-plan-pre-check-and-quiz">Start: Plan Pre-Check And Quiz</h3> <p>Humanize does not start from raw user text.</p> <p>The command first tries to read the plan and ask a plan-compliance agent:</p> <div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>plan compliance checker:
+  inspect repository structure
+  check whether plan belongs to this repo
+  reject branch-switching instructions
+  return exactly:
+    PASS
+    FAIL_RELEVANCE
+    FAIL_BRANCH_SWITCH
+</code></pre></div></div> <p>If the output is malformed, the command fails closed.</p> <p>Then, unless the user opts out, it asks a quiz agent to produce two multiple choice questions and a plan summary:</p> <div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>plan understanding quiz:
+  QUESTION_1: mechanism question
+  QUESTION_2: architecture question
+  PLAN_SUMMARY
+
+if user misses questions:
+  show summary and correct answers
+  ask whether to proceed or stop
+</code></pre></div></div> <p>This quiz is advisory friction. It does not prove the plan is good. It catches the common case where a user accepts a generated plan without understanding what work is about to be delegated.</p> <h3 id="setup-state-becomes-inspectable">Setup: State Becomes Inspectable</h3> <p>Setup creates <code class="language-plaintext highlighter-rouge">.humanize/rlcr/&lt;timestamp&gt;/state.md</code>.</p> <p>The essential state shape is:</p> <div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">current_round</span><span class="pi">:</span> <span class="m">0</span>
+<span class="na">max_iterations</span><span class="pi">:</span> <span class="m">42</span>
+<span class="na">codex_model</span><span class="pi">:</span> <span class="s">gpt-5.5</span>
+<span class="na">codex_effort</span><span class="pi">:</span> <span class="s">high</span>
+<span class="na">codex_timeout</span><span class="pi">:</span> <span class="m">5400</span>
+<span class="na">base_branch</span><span class="pi">:</span> <span class="s">main</span>
+<span class="na">base_commit</span><span class="pi">:</span> <span class="s">&lt;fixed merge-base or branch commit&gt;</span>
+<span class="na">review_started</span><span class="pi">:</span> <span class="kc">false</span>
+<span class="na">agent_teams</span><span class="pi">:</span> <span class="kc">false</span>
+<span class="na">privacy_mode</span><span class="pi">:</span> <span class="kc">false</span>
+<span class="na">bitlesson_required</span><span class="pi">:</span> <span class="kc">false</span>
+<span class="na">mainline_stall_count</span><span class="pi">:</span> <span class="m">0</span>
+<span class="na">last_mainline_verdict</span><span class="pi">:</span> <span class="s">unknown</span>
+<span class="na">drift_status</span><span class="pi">:</span> <span class="s">normal</span>
+</code></pre></div></div> <p>The state file is the loop’s source of truth. It lets the stop hook know which round is active, whether review phase has started, which base commit should be used for final diff review, and whether the loop is drifting.</p> <h3 id="goal-tracker-immutable-goal-mutable-board">Goal Tracker: Immutable Goal, Mutable Board</h3> <p>Humanize’s goal tracker separates the part that should not drift from the part that must evolve as the agent learns.</p> <div class="language-markdown highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="gh"># Goal Tracker</span>
+
+<span class="gu">## IMMUTABLE SECTION</span>
+
+<span class="gu">### Ultimate Goal</span>
+<span class="nt">&lt;copied</span> <span class="na">or</span> <span class="na">extracted</span> <span class="na">from</span> <span class="na">plan</span><span class="nt">&gt;</span>
+
+<span class="gu">### Acceptance Criteria</span>
+<span class="p">-</span> AC-1: <span class="nt">&lt;observable</span> <span class="na">condition</span><span class="nt">&gt;</span>
+<span class="p">-</span> AC-2: <span class="nt">&lt;observable</span> <span class="na">condition</span><span class="nt">&gt;</span>
+<span class="p">
+---
+</span>
+<span class="gu">## MUTABLE SECTION</span>
+
+<span class="gu">### Plan Evolution Log</span>
+| Round | Change | Reason | Impact on AC |
+
+<span class="gu">### Active Tasks</span>
+| Task | Target AC | Status | Tag | Owner | Notes |
+
+<span class="gu">### Blocking Side Issues</span>
+| Issue | Discovered Round | Blocking AC | Resolution Path |
+
+<span class="gu">### Queued Side Issues</span>
+| Issue | Discovered Round | Why Not Blocking | Revisit Trigger |
+
+<span class="gu">### Completed and Verified</span>
+| AC | Task | Completed Round | Verified Round | Evidence |
+
+<span class="gu">### Explicitly Deferred</span>
+| Task | Original AC | Deferred Since | Justification |
+</code></pre></div></div> <p>This is one of the most important Humanize ideas. It prevents local findings from silently replacing the original plan. New issues are not ignored, but they must be classified:</p> <ul> <li><code class="language-plaintext highlighter-rouge">mainline</code>: plan-derived work that directly advances the current objective.</li> <li><code class="language-plaintext highlighter-rouge">blocking</code>: side issue that prevents current mainline success.</li> <li><code class="language-plaintext highlighter-rouge">queued</code>: valid follow-up that must not take over the round.</li> </ul> <h3 id="round-contract-one-round-one-mainline-objective">Round Contract: One Round, One Mainline Objective</h3> <p>Each round must write a round contract before coding:</p> <div class="language-markdown highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="gh"># Round N Contract</span>
+<span class="p">
+-</span> Mainline Objective: <span class="nt">&lt;one</span> <span class="na">objective</span> <span class="na">for</span> <span class="na">this</span> <span class="na">round</span><span class="nt">&gt;</span>
+<span class="p">-</span> Target ACs: <span class="nt">&lt;acceptance</span> <span class="na">criteria</span> <span class="na">this</span> <span class="na">round</span> <span class="na">advances</span><span class="nt">&gt;</span>
+<span class="p">-</span> Blocking Side Issues In Scope: <span class="nt">&lt;must</span> <span class="na">fix</span> <span class="na">now</span><span class="nt">&gt;</span>
+<span class="p">-</span> Queued Side Issues Out of Scope: <span class="nt">&lt;valid</span> <span class="na">but</span> <span class="na">not</span> <span class="na">steering</span><span class="nt">&gt;</span>
+<span class="p">-</span> Success Criteria: <span class="nt">&lt;evidence</span> <span class="na">needed</span> <span class="na">before</span> <span class="na">stop</span><span class="nt">&gt;</span>
+</code></pre></div></div> <p>This contract is the local steering wheel. Review findings can be severe, but they do not automatically become the new project. The next round must decide which findings are truly blocking the mainline objective.</p> <h3 id="summary-interface-what-crosses-the-inner-review-boundary">Summary Interface: What Crosses The Inner Review Boundary</h3> <p>The builder writes a round summary:</p> <div class="language-markdown highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="gu">## What Was Implemented</span>
+<span class="p">-</span> AC-1: done, evidence: <span class="nt">&lt;test</span> <span class="na">or</span> <span class="na">artifact</span><span class="nt">&gt;</span>
+
+<span class="gu">## Files Changed</span>
+<span class="p">-</span> <span class="nt">&lt;path&gt;</span>: <span class="nt">&lt;why</span> <span class="na">it</span> <span class="na">changed</span><span class="nt">&gt;</span>
+
+<span class="gu">## Validation</span>
+<span class="p">-</span> <span class="nt">&lt;command&gt;</span>: pass/fail/not run, reason
+
+<span class="gu">## Remaining Items</span>
+<span class="p">-</span> [mainline] <span class="nt">&lt;still</span> <span class="na">required</span><span class="nt">&gt;</span>
+<span class="p">-</span> [queued] <span class="nt">&lt;follow-up</span><span class="err">,</span> <span class="na">not</span> <span class="na">blocking</span><span class="nt">&gt;</span>
+
+<span class="gu">## BitLesson Delta</span>
+<span class="p">-</span> Action: none|add|update
+<span class="p">-</span> Lesson ID(s): <span class="nt">&lt;IDs</span> <span class="na">or</span> <span class="na">NONE</span><span class="nt">&gt;</span>
+<span class="p">-</span> Notes: <span class="nt">&lt;what</span> <span class="na">changed</span> <span class="na">and</span> <span class="na">why</span><span class="nt">&gt;</span>
+</code></pre></div></div> <p>The summary is not trusted blindly. It is just the packet that crosses the inner review boundary. The hook checks that it exists. Codex reviews it against the plan, goal tracker, and recent history.</p> <h3 id="stop-hook-cheap-gates-before-model-judgement">Stop Hook: Cheap Gates Before Model Judgement</h3> <p>The stop hook is the loop’s judge of whether the builder is allowed to exit the current round.</p> <p>Simplified:</p> <div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>on_stop:
+  parse state.md
+  reject malformed state
+  block branch switch
+  block plan mutation during implementation
+  block incomplete mainline or blocking tasks
+  block missing summary
+  block missing round contract
+  block uninitialized goal tracker
+  block invalid BitLesson Delta
+  block max-iteration overflow
+  then call Codex summary review
+</code></pre></div></div> <p>This is the cheap critique layer. Deterministic checks remove mechanical uncertainty before an expensive model reviewer spends judgement.</p> <h3 id="codex-summary-review-mainline-verdict">Codex Summary Review: Mainline Verdict</h3> <p>The implementation reviewer must classify findings into lanes and provide a mainline progress verdict:</p> <div class="language-markdown highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="gu">### Mainline Gaps</span>
+<span class="p">-</span> <span class="nt">&lt;plan-derived</span> <span class="na">work</span> <span class="na">or</span> <span class="na">AC</span> <span class="na">progress</span> <span class="na">missing</span><span class="nt">&gt;</span>
+
+<span class="gu">### Blocking Side Issues</span>
+<span class="p">-</span> <span class="nt">&lt;bug</span> <span class="na">that</span> <span class="na">blocks</span> <span class="na">current</span> <span class="na">mainline</span> <span class="na">objective</span><span class="nt">&gt;</span>
+
+<span class="gu">### Queued Side Issues</span>
+<span class="p">-</span> <span class="nt">&lt;valid</span> <span class="na">follow-up</span> <span class="na">that</span> <span class="na">should</span> <span class="na">not</span> <span class="na">take</span> <span class="na">over</span><span class="nt">&gt;</span>
+
+Mainline Progress Verdict: ADVANCED / STALLED / REGRESSED
+
+<span class="nt">&lt;terminal</span> <span class="na">line</span><span class="nt">&gt;</span>
+COMPLETE
+or
+STOP
+or
+<span class="nt">&lt;findings</span> <span class="na">to</span> <span class="na">fix</span><span class="nt">&gt;</span>
+</code></pre></div></div> <p>The <code class="language-plaintext highlighter-rouge">Mainline Progress Verdict</code> is crucial. A round can fix real bugs and still fail to advance the plan. Humanize tracks that difference.</p> <h3 id="drift-recovery">Drift Recovery</h3> <p>If Codex says the mainline stalled or regressed, the hook increments a drift counter:</p> <div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>if verdict == ADVANCED:
+  mainline_stall_count = 0
+
+if verdict in {STALLED, REGRESSED}:
+  mainline_stall_count += 1
+
+if mainline_stall_count == 2:
+  require drift recovery prompt
+
+if mainline_stall_count &gt;= 3:
+  stop with circuit breaker
+</code></pre></div></div> <p>The drift recovery prompt asks the builder to re-read the original plan, update the goal tracker, and write a recovered round contract with exactly one mainline objective.</p> <p>This is how Humanize prevents a side quest from becoming the project.</p> <h3 id="final-diff-review">Final Diff Review</h3> <p>When summary review says <code class="language-plaintext highlighter-rouge">COMPLETE</code>, Humanize does not finish immediately.</p> <p>It moves into review phase:</p> <div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>review_base = base_commit captured at setup
+result = codex review --base review_base
+
+if priority findings exist:
+  create review-fix prompt
+  keep original plan stable
+else:
+  enter finalize and methodology analysis
+</code></pre></div></div> <p>The fixed base commit matters. Without it, the comparison target can move while the loop runs, making review ambiguous.</p> <h3 id="bitlesson-memory-with-selection-and-delta-validation">BitLesson: Memory With Selection And Delta Validation</h3> <p>BitLesson is Humanize’s memory discipline.</p> <p>Before a task, a selector reads the task, related paths, and the current BitLesson file:</p> <div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>selector input:
+  sub-task description
+  related file paths
+  current .humanize/bitlesson.md
+
+selector output:
+  LESSON_IDS: &lt;comma-separated IDs or NONE&gt;
+  RATIONALE: &lt;one concise sentence&gt;
+</code></pre></div></div> <p>After the round, the summary must include <code class="language-plaintext highlighter-rouge">## BitLesson Delta</code>:</p> <div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Action: none|add|update
+Lesson ID(s): &lt;IDs or NONE&gt;
+Notes: &lt;what changed and why&gt;
+</code></pre></div></div> <p>The delta validator checks:</p> <ul> <li>The section exists.</li> <li>The action is one of <code class="language-plaintext highlighter-rouge">none</code>, <code class="language-plaintext highlighter-rouge">add</code>, <code class="language-plaintext highlighter-rouge">update</code>.</li> <li><code class="language-plaintext highlighter-rouge">none</code> has no concrete IDs.</li> <li><code class="language-plaintext highlighter-rouge">add</code> or <code class="language-plaintext highlighter-rouge">update</code> has concrete IDs.</li> <li>IDs use the expected format.</li> <li>IDs exist in the BitLesson file when claimed.</li> <li>Notes are present and not placeholder text.</li> </ul> <p>The lesson is that memory should be selected and accountable. The agent should not silently ignore reusable knowledge, and it should not silently claim it updated knowledge without evidence.</p> <h3 id="methodology-analysis-the-harness-critiques-itself">Methodology Analysis: The Harness Critiques Itself</h3> <p>After successful completion, Humanize can enter methodology analysis:</p> <div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>enter_methodology_analysis(exit_reason):
+  if privacy mode:
+    skip
+  rename state.md -&gt; methodology-analysis-state.md
+  write .methodology-exit-reason
+  ask analysis agent to inspect round summaries and review results
+  require methodology-analysis-report.md
+  require methodology-analysis-done.md
+  optionally ask human to file sanitized issue
+  rename methodology-analysis-state.md -&gt; complete/stop/maxiter-state.md
+</code></pre></div></div> <p>This turns run traces into method improvement. The analysis is supposed to criticize the harness, not the project.</p> <h3 id="humanize-h1-mechanism-deck">Humanize h1 Mechanism Deck</h3> <section class="hcards" aria-label="Humanize h1 mechanism deck"> <div class="hcards__title">Humanize h1 mechanism deck</div> <div class="hcards__rail" tabindex="0"> <article id="h1-01" class="hcard"> <h4 class="hcard__title">Plan pre-check and quiz</h4> <div class="hcard__body"> <p>Start from a plan, not raw intent. Check repository relevance and branch-safety first. Then optionally quiz the human on the plan to catch delegated work the human did not understand.</p> </div> </article> <article id="h1-02" class="hcard"> <h4 class="hcard__title">Inspectable loop state</h4> <div class="hcard__body"> <p>Write round number, budget, model config, base commit, review phase, privacy mode, BitLesson mode, and drift counters into a state file. Hooks read state from disk instead of trusting chat memory.</p> </div> </article> <article id="h1-03" class="hcard"> <h4 class="hcard__title">Goal tracker</h4> <div class="hcard__body"> <p>Split immutable goal and acceptance criteria from mutable task state. This creates a stable plan anchor while still allowing the board to evolve with findings.</p> </div> </article> <article id="h1-04" class="hcard"> <h4 class="hcard__title">Round contract</h4> <div class="hcard__body"> <p>Require one mainline objective per round. Classify side issues as blocking or queued so reviewer findings cannot silently become the new project.</p> </div> </article> <article id="h1-05" class="hcard"> <h4 class="hcard__title">Summary packet</h4> <div class="hcard__body"> <p>Make the builder write what changed, why it changed, how it was validated, and what remains. The reviewer judges this packet against the plan and tracker.</p> </div> </article> <article id="h1-06" class="hcard"> <h4 class="hcard__title">Cheap stop gates</h4> <div class="hcard__body"> <p>Before model review, block missing summaries, missing contracts, invalid memory deltas, uninitialized trackers, branch switches, and max-iteration overflow.</p> </div> </article> <article id="h1-07" class="hcard"> <h4 class="hcard__title">Mainline verdict</h4> <div class="hcard__body"> <p>Require the reviewer to say whether the original plan advanced, stalled, or regressed. Local bug fixing is not automatically plan progress.</p> </div> </article> <article id="h1-08" class="hcard"> <h4 class="hcard__title">Drift recovery</h4> <div class="hcard__body"> <p>After repeated stalled or regressed rounds, force a recovery contract. After more repeated drift, stop instead of letting the loop consume unbounded work.</p> </div> </article> <article id="h1-09" class="hcard"> <h4 class="hcard__title">Diff review</h4> <div class="hcard__body"> <p>After summary review says complete, run a final patch review against the fixed base commit. Plan completion and patch correctness are separate questions.</p> </div> </article> <article id="h1-10" class="hcard"> <h4 class="hcard__title">Methodology analysis</h4> <div class="hcard__body"> <p>At the end, inspect the loop records from a method-improvement perspective. The harness becomes an object that can be criticized and improved.</p> </div> </article> </div> </section> <h3 id="humanize-setup-parameters">Humanize Setup Parameters</h3> <p>Humanize exposes several decisions that matter to reproduction:</p> <table> <thead> <tr> <th>Parameter</th> <th>Meaning</th> </tr> </thead> <tbody> <tr> <td><code class="language-plaintext highlighter-rouge">--max</code></td> <td>Maximum implementation rounds before termination.</td> </tr> <tr> <td><code class="language-plaintext highlighter-rouge">--codex-model MODEL:EFFORT</code></td> <td>Reviewer model and reasoning effort.</td> </tr> <tr> <td><code class="language-plaintext highlighter-rouge">--codex-timeout</code></td> <td>Review command timeout.</td> </tr> <tr> <td><code class="language-plaintext highlighter-rouge">--full-review-round</code></td> <td>Cadence for deeper full-alignment review.</td> </tr> <tr> <td><code class="language-plaintext highlighter-rouge">--base-branch</code> and captured <code class="language-plaintext highlighter-rouge">base_commit</code></td> <td>Stable diff-review target.</td> </tr> <tr> <td><code class="language-plaintext highlighter-rouge">--track-plan-file</code></td> <td>Blocks silent mutation of the source plan.</td> </tr> <tr> <td><code class="language-plaintext highlighter-rouge">--skip-quiz</code>, <code class="language-plaintext highlighter-rouge">--yolo</code></td> <td>Human can waive advisory plan-friction.</td> </tr> <tr> <td><code class="language-plaintext highlighter-rouge">--agent-teams</code></td> <td>Optional thin parallelism wrapper.</td> </tr> <tr> <td>BitLesson strictness</td> <td>Controls whether empty memory can keep reporting no lesson.</td> </tr> <tr> <td><code class="language-plaintext highlighter-rouge">--privacy</code></td> <td>Skips methodology-sharing path.</td> </tr> </tbody> </table> <p>These parameters are not merely CLI details. They are the knobs that decide how strict, autonomous, private, and expensive the harness is.</p> <h2 id="case-study-2-codex-review-and-goals">Case Study 2: Codex Review And Goals</h2> <p>Codex offers two mechanisms that are narrower than Humanize but architecturally clean.</p> <ol> <li><strong>Review</strong> is a bounded service: choose a target, run a narrowed reviewer, parse output, record lifecycle events, exit.</li> <li><strong>Goal</strong> is a persistent contract: store an objective, track lifecycle and usage, continue only at safe boundaries, and restrict what status changes the model may make.</li> </ol> <p>The lesson is that not every harness feature should be modeled as a workflow graph. Review is naturally a service. Goal is naturally persisted state plus runtime policy.</p> <h3 id="codex-review-reproduction-model">Codex Review: Reproduction Model</h3> <p>To reproduce Codex review, implement:</p> <table> <thead> <tr> <th>Object</th> <th>Purpose</th> </tr> </thead> <tbody> <tr> <td>Review target</td> <td>Defines what evidence the reviewer inspects.</td> </tr> <tr> <td>Review request</td> <td>Converts target into a prompt and diff context.</td> </tr> <tr> <td>Narrow reviewer config</td> <td>Disables builder-like powers.</td> </tr> <tr> <td>Review output parser</td> <td>Parses typed findings, falls back to text.</td> </tr> <tr> <td>Lifecycle events</td> <td>Entered review, exited review, assistant message.</td> </tr> <tr> <td>Inline/detached delivery</td> <td>Run review in parent thread or forked thread.</td> </tr> </tbody> </table> <p>The review prompt makes the role narrow:</p> <div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>You are reviewing changes for bugs.
+Report only findings the author would fix.
+Prioritize correctness, regressions, security, data loss, and spec violations.
+
+Output JSON:
+  findings: [
+    title,
+    body,
+    confidence_score,
+    priority,
+    code_location
+  ]
+  overall_correctness
+  overall_explanation
+  overall_confidence_score
+</code></pre></div></div> <p>The target contract is explicit:</p> <div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>ReviewTarget:
+  uncommittedChanges
+  baseBranch(branch)
+  commit(sha, optional_title)
+  custom(instructions)
+
+Validation:
+  branch cannot be empty
+  commit sha cannot be empty
+  custom instructions cannot be empty
+</code></pre></div></div> <p>Base-branch review tries to compute a merge base and review the diff from that base. If a merge base is unavailable, it falls back to a branch-diff prompt.</p> <h3 id="codex-review-narrowed-sub-agent">Codex Review: Narrowed Sub-Agent</h3> <p>Review runs as a one-shot sub-agent with reduced authority:</p> <div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>start_review_conversation(request):
+  sub_config = copy(parent_config)
+  sub_config.web_search = disabled
+  sub_config.spawn = disabled
+  sub_config.collaboration = disabled
+  sub_config.multi_agent = disabled
+  sub_config.approval_policy = never
+  sub_config.model = review_model if configured else current_model
+  sub_config.base_instructions = REVIEW_PROMPT
+
+  run_one_shot_sub_agent(source = Review, prompt = request)
+</code></pre></div></div> <p>This is important. The reviewer is not a normal implementation agent wearing a different prompt. The configuration narrows what it can do.</p> <h3 id="codex-review-output-handling">Codex Review: Output Handling</h3> <p>Codex tries to preserve structure without failing the whole review when the model misses the schema:</p> <div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>process_review_events:
+  suppress streaming assistant deltas
+  wait for final assistant message
+  parse JSON review output
+  else parse first JSON object found in text
+  else treat text as overall_explanation
+
+exit_review_mode:
+  record user_action message containing review output
+  emit ExitedReviewMode event
+  record assistant message with human-readable review
+  materialize rollout
+</code></pre></div></div> <p>The fallback is pragmatic. It preserves review text, but the trace should know whether the output was structured JSON or plain text. Those are different evidence quality levels.</p> <h3 id="codex-review-inline-and-detached-delivery">Codex Review: Inline And Detached Delivery</h3> <p>The API supports two delivery modes:</p> <div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>review/start(thread_id, target, delivery = inline):
+  validate target
+  build display text and ReviewRequest
+
+  if delivery == inline:
+    submit Op::Review to existing thread
+    review_thread_id = thread_id
+
+  if delivery == detached:
+    materialize parent rollout
+    load parent history
+    fork new review thread
+    optionally override model with review_model
+    submit Op::Review to child thread
+    review_thread_id = child_thread_id
+</code></pre></div></div> <p>Inline review shares the parent thread. Detached review isolates the reviewer in a fork. That is a clean pattern for any harness: some checks should be part of the main conversation, while others should run in a separate review lane.</p> <h3 id="codex-goal-reproduction-model">Codex Goal: Reproduction Model</h3> <p>A Codex goal is thread-scoped durable state:</p> <div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span><span class="w">
+  </span><span class="nl">"threadId"</span><span class="p">:</span><span class="w"> </span><span class="s2">"thr_123"</span><span class="p">,</span><span class="w">
+  </span><span class="nl">"objective"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Reduce p95 latency below 120ms while tests stay green"</span><span class="p">,</span><span class="w">
+  </span><span class="nl">"status"</span><span class="p">:</span><span class="w"> </span><span class="s2">"active"</span><span class="p">,</span><span class="w">
+  </span><span class="nl">"tokenBudget"</span><span class="p">:</span><span class="w"> </span><span class="mi">200000</span><span class="p">,</span><span class="w">
+  </span><span class="nl">"tokensUsed"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w">
+  </span><span class="nl">"timeUsedSeconds"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w">
+  </span><span class="nl">"createdAt"</span><span class="p">:</span><span class="w"> </span><span class="mi">1776272400</span><span class="p">,</span><span class="w">
+  </span><span class="nl">"updatedAt"</span><span class="p">:</span><span class="w"> </span><span class="mi">1776272400</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre></div></div> <p>External clients can manage it:</p> <div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>thread/goal/set:
+  create or update current goal
+  may set objective, status, token budget
+  emits thread/goal/updated
+
+thread/goal/get:
+  return current goal or null
+
+thread/goal/clear:
+  delete current goal
+  emit thread/goal/cleared when state changes
+</code></pre></div></div> <p>The model sees a narrower tool surface:</p> <div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>get_goal():
+  read objective, status, budget, token usage, time usage
+
+create_goal(objective, token_budget?):
+  only when explicitly requested
+  fails if a goal already exists
+
+update_goal(status):
+  status must be complete or blocked
+  cannot pause, resume, budget-limit, or usage-limit
+</code></pre></div></div> <p>This separates authority:</p> <div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>model:
+  complete
+  blocked
+
+user/API:
+  set
+  pause
+  resume
+  clear
+
+system/runtime:
+  budget_limited
+  usage_limited
+  accounting
+  continuation
+</code></pre></div></div> <h3 id="goal-authoring-what-the-cookbook-adds">Goal Authoring: What The Cookbook Adds</h3> <p>The Codex source explains goal state and runtime. The OpenAI Cookbook explains how a human should write a goal that is worth running.</p> <p>A normal prompt says:</p> <div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>do this next thing
+</code></pre></div></div> <p>A goal says:</p> <div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>keep working until this outcome is true
+</code></pre></div></div> <p>Strong goals usually include:</p> <div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>outcome:
+  what should be true when done
+
+verification surface:
+  test, benchmark, report, command output, artifact, or source material
+
+constraints:
+  what must not regress
+
+boundaries:
+  files, tools, data, repositories, or resources Codex may use
+
+iteration policy:
+  how to choose the next attempt after each result
+
+blocked stop condition:
+  when no defensible path remains and what input would unlock progress
+</code></pre></div></div> <p>Example:</p> <div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Weak:
+  /goal Improve performance
+
+Strong:
+  /goal Reduce p95 checkout latency below 120 ms on the checkout benchmark
+        while keeping the correctness test suite green.
+</code></pre></div></div> <p>The stronger version gives Codex an outcome, evidence surface, and constraint. If latency improves from 180 ms to 135 ms, the goal is not done. If latency drops below 120 ms but correctness tests fail, the goal is not done.</p> <p>The Cookbook’s research example is even more important. “Reproduce the paper” is too vague. A stronger research goal asks for:</p> <div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>claim inventory
+evidence mapping
+feasible local reproductions
+approximate support where exact replay is impossible
+blocked claims
+remaining uncertainty
+final report that preserves those distinctions
+</code></pre></div></div> <p>This is the right pattern for agentic research and optimization. The agent can continue through ambiguity without flattening uncertainty into a false success.</p> <h3 id="codex-goal-continuation">Codex Goal Continuation</h3> <p>When a goal remains active, Codex injects a continuation prompt:</p> <div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Continue working toward the active thread goal.
+
+The objective persists across turns.
+Do not shrink it to what fits now.
+Make concrete progress toward the real requested end state.
+
+Before marking complete:
+  derive concrete requirements
+  inspect current evidence
+  verify every requirement
+  do not mark complete from partial progress
+
+Before marking blocked:
+  do not stop on first blocker
+  same blocker must recur across multiple goal turns
+  blocked means no meaningful progress is possible
+</code></pre></div></div> <p>The goal is not higher-priority instruction. It is user-provided state that the runtime keeps visible and bounded.</p> <h3 id="budget-and-objective-updates">Budget And Objective Updates</h3> <p>When token budget is exhausted, runtime owns the transition:</p> <div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>status = budget_limited
+inject budget-limit prompt
+tell agent:
+  stop new substantive work
+  summarize progress
+  list remaining work
+  do not call update_goal unless actually complete
+</code></pre></div></div> <p>When the user edits the objective while a turn is running:</p> <div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>external objective update:
+  account current progress
+  update state DB
+  emit ordered notification
+  inject objective-updated prompt
+  tell agent new objective supersedes old objective
+</code></pre></div></div> <p>This prevents the agent from acting on stale goal state.</p> <h3 id="goal-runtime-event-switch">Goal Runtime Event Switch</h3> <p>The runtime is event-driven:</p> <div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>TurnStarted:
+  capture active goal id
+  capture token/time baseline
+
+ToolCompleted:
+  account usage
+  maybe inject budget steering
+
+ToolCompletedGoal:
+  account usage before goal update
+
+TurnFinished:
+  account final usage
+  clear continuation reservation
+
+UsageLimitReached:
+  mark active goal usage_limited
+
+ExternalSet:
+  account before mutation
+  update runtime state
+  maybe inject objective-updated steering
+
+ExternalClear:
+  clear runtime state
+
+ThreadResumed:
+  restore active-goal accounting if status is active
+
+MaybeContinueIfIdle:
+  start continuation if active, idle, and no queued input
+</code></pre></div></div> <p>This is why goals are not just workflow steps. They are state observed by runtime policy.</p> <h3 id="codex-mechanism-deck">Codex Mechanism Deck</h3> <section class="hcards" aria-label="Codex review and goal mechanism deck"> <div class="hcards__title">Codex review and goal mechanism deck</div> <div class="hcards__rail" tabindex="0"> <article id="codex-01" class="hcard"> <h4 class="hcard__title">Review target contract</h4> <div class="hcard__body"> <p>Review starts from a typed target: uncommitted changes, base branch, commit, or custom instructions. Empty targets are rejected before the reviewer runs.</p> </div> </article> <article id="codex-02" class="hcard"> <h4 class="hcard__title">Narrow reviewer service</h4> <div class="hcard__body"> <p>The reviewer is a one-shot sub-agent with web search, spawning, collaboration, and approval prompts disabled. It reviews; it does not build.</p> </div> </article> <article id="codex-03" class="hcard"> <h4 class="hcard__title">Structured output with fallback</h4> <div class="hcard__body"> <p>Codex parses JSON findings when possible, then tries a JSON substring, then falls back to plain text. The trace should preserve the parse quality.</p> </div> </article> <article id="codex-04" class="hcard"> <h4 class="hcard__title">Inline vs detached review</h4> <div class="hcard__body"> <p>Inline review writes into the parent thread. Detached review materializes history and forks a separate review thread for isolation.</p> </div> </article> <article id="codex-05" class="hcard"> <h4 class="hcard__title">Goal as durable state</h4> <div class="hcard__body"> <p>A goal is a persisted thread object with objective, status, budget, usage, and timestamps. It is not just text in the current prompt.</p> </div> </article> <article id="codex-06" class="hcard"> <h4 class="hcard__title">Caller-specific permissions</h4> <div class="hcard__body"> <p>The model can mark complete or blocked. User/API controls set, pause, resume, and clear. Runtime controls budget and usage statuses.</p> </div> </article> <article id="codex-07" class="hcard"> <h4 class="hcard__title">Goal authoring fields</h4> <div class="hcard__body"> <p>Strong goals name outcome, evidence, constraints, boundaries, iteration policy, and blocked stop condition. This is the user-facing half of the contract.</p> </div> </article> <article id="codex-08" class="hcard"> <h4 class="hcard__title">Completion audit</h4> <div class="hcard__body"> <p>Continuation prompts require requirement-by-requirement verification before <code class="language-plaintext highlighter-rouge">complete</code>. Improvement or plausible intent is not enough.</p> </div> </article> <article id="codex-09" class="hcard"> <h4 class="hcard__title">Idle continuation</h4> <div class="hcard__body"> <p>Continuation starts only when goals are enabled, the thread is idle, no input is queued, the mode allows it, and the goal is still active.</p> </div> </article> <article id="codex-10" class="hcard"> <h4 class="hcard__title">External mutation steering</h4> <div class="hcard__body"> <p>If the user edits the objective mid-run, runtime updates state and injects a prompt telling the agent the new objective supersedes the old one.</p> </div> </article> </div> </section> <h3 id="codex-goal-setup-decisions">Codex Goal Setup Decisions</h3> <table> <thead> <tr> <th>Decision</th> <th>Effect</th> </tr> </thead> <tbody> <tr> <td>Materialized thread required</td> <td>Goals need durable state DB storage.</td> </tr> <tr> <td>Objective text</td> <td>Human-facing canonical target, but weak without evidence semantics.</td> </tr> <tr> <td>Token budget</td> <td>Bounds autonomous continuation.</td> </tr> <tr> <td>Model tool restrictions</td> <td>Prevents model from owning pause, resume, budget, and usage states.</td> </tr> <tr> <td>Completion audit prompt</td> <td>Prevents shrinking the goal to local progress.</td> </tr> <tr> <td>Blocked recurrence</td> <td>Prevents premature “blocked” labels.</td> </tr> <tr> <td>Idle continuation guard</td> <td>Prevents background work when thread is active or user input is queued.</td> </tr> <tr> <td>External mutation handling</td> <td>Keeps active turns aligned with changed objectives.</td> </tr> <tr> <td><code class="language-plaintext highlighter-rouge">/goal pause/resume/clear</code></td> <td>Gives user lifecycle control.</td> </tr> </tbody> </table> <h2 id="comparing-the-two-harness-shapes">Comparing The Two Harness Shapes</h2> <p>Humanize and Codex solve overlapping problems with different shapes.</p> <table> <thead> <tr> <th>Concern</th> <th>Humanize h1</th> <th>Codex Review</th> <th>Codex Goals</th> </tr> </thead> <tbody> <tr> <td>Main abstraction</td> <td>Workflow loop</td> <td>Bounded service</td> <td>Persistent contract plus runtime policy</td> </tr> <tr> <td>Objective</td> <td>Plan and goal tracker</td> <td>Review target only</td> <td>Thread goal objective</td> </tr> <tr> <td>Evidence</td> <td>Summary, tests, tracker, diff, BitLesson</td> <td>Diff or custom target</td> <td>User-defined evidence in objective</td> </tr> <tr> <td>Stop control</td> <td>Stop hook blocks exit</td> <td>One-shot service exits</td> <td>Runtime continuation and goal status</td> </tr> <tr> <td>Review</td> <td>Codex summary review and diff review</td> <td>Review service itself</td> <td>Optional; not built into goal</td> </tr> <tr> <td>Drift handling</td> <td>Mainline verdict and drift recovery</td> <td>Not applicable</td> <td>Completion and blocked audits</td> </tr> <tr> <td>Memory</td> <td>BitLesson selector and delta</td> <td>Conversation review artifact</td> <td>Persisted goal state and usage</td> </tr> <tr> <td>Self-improvement</td> <td>Methodology analysis</td> <td>Trace only</td> <td>Goal trace and accounting</td> </tr> </tbody> </table> <p>Humanize is heavier but demonstrates a full long-task development loop. Codex is smaller but cleaner in separating service, contract, and runtime policy.</p> <h2 id="what-is-missing-in-these-harnesses">What Is Missing In These Harnesses?</h2> <p>Both systems are useful, but both leave gaps for project-wide strategy evolution.</p> <h3 id="1-objective-semantics-are-still-too-textual">1. Objective Semantics Are Still Too Textual</h3> <p>Humanize has a plan and goal tracker. Codex has a goal string plus runtime state. The Cookbook shows how to write strong goal prose.</p> <p>But prose is not enough for project evolution.</p> <p>A target project often needs objective services such as:</p> <div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>acceptance_criteria()
+evidence_requirements()
+allowed_artifacts()
+benchmark_budget()
+correctness_oracle()
+domain_constraints()
+blocked_evidence_threshold()
+</code></pre></div></div> <p>Those should be programmable. For example, a kernel-evolution target should not rely on a prompt sentence to explain numerical tolerance, benchmark commands, GPU constraints, and allowed files.</p> <h3 id="2-evidence-needs-types-and-grades">2. Evidence Needs Types And Grades</h3> <p>Humanize has summaries and reviews. Codex goals ask for evidence. The research example shows that evidence can be exact, approximate, proxy, blocked, or unknown.</p> <p>Most harnesses still flatten this too much.</p> <p>For strategy evolution, evidence should be typed:</p> <div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Exact:
+  deterministic test, verified reproduction, exact metric threshold
+
+Approximate:
+  trained replacement, close numerical match, statistical support
+
+Proxy:
+  benchmark related to production but not identical
+
+Blocked:
+  missing data, unavailable hardware, missing upstream artifact
+
+Unknown:
+  not checked yet, inconclusive, contradictory runs
+</code></pre></div></div> <p>Without typed evidence, an agent can overclaim success.</p> <h3 id="3-workflow-is-too-often-the-root-object">3. Workflow Is Too Often The Root Object</h3> <p>Humanize looks workflow-centric because the user runs one loop. Codex goals look less workflow-centric because continuation is runtime policy over state.</p> <p>For a general framework, workflow should not own everything.</p> <p>A better decomposition is:</p> <div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Service:
+  bounded request/response, such as review(target)
+
+Contract:
+  durable state and allowed operations, such as objective or target
+
+Policy:
+  event-driven behavior over contracts and services, such as continuation
+
+Trace:
+  request, response, evidence, status change, degraded output, reviewer finding
+</code></pre></div></div> <p>Workflow can be a policy. It should not be the only way to express the system.</p> <h3 id="4-harness-evolution-is-not-first-class-enough">4. Harness Evolution Is Not First-Class Enough</h3> <p>Humanize methodology analysis is a strong idea: the run should critique the method, not only the project. Codex traces lifecycle and usage events.</p> <p>But a general harness should make the harness itself inspectable:</p> <div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Which service calls happened?
+Which gates blocked work?
+Which evidence was missing?
+Which prompts caused drift?
+Which review findings repeated?
+Which contract fields were too weak?
+Which policies launched wasteful work?
+</code></pre></div></div> <p>Those traces should become inputs for improving the harness.</p> <h3 id="5-the-user-interface-for-harness-power-is-still-hard">5. The User Interface For Harness Power Is Still Hard</h3> <p>Codex’s <code class="language-plaintext highlighter-rouge">/goal</code> command is easy. Humanize’s RLCR is powerful but heavier.</p> <p>A general framework needs progressive disclosure:</p> <div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Level 0:
+  one prompt or one workflow
+
+Level 1:
+  add a goal/objective contract
+
+Level 2:
+  add evidence services and review gates
+
+Level 3:
+  add memory, drift recovery, and methodology analysis
+
+Level 4:
+  let agents inspect traces and improve the harness itself
+</code></pre></div></div> <p>Users should not pay setup cost for features they do not need.</p> <h2 id="what-this-suggests-for-puppeteer">What This Suggests For Puppeteer</h2> <p>The case studies suggest Puppeteer’s position:</p> <blockquote> <p>Puppeteer should be an outside project-improvement harness that lets a target project expose programmable contracts and services to one or more agents, while the harness mediates communication, evidence, gates, policies, and traces.</p> </blockquote> <p>This is not the same as replacing Humanize or Codex.</p> <p>Humanize is a workflow-rich harness. Codex goals are a clean thread-objective mechanism. Puppeteer should learn from both while targeting a broader use case: strategy evolution inside arbitrary projects.</p> <h3 id="puppeteers-missing-layer">Puppeteer’s Missing Layer</h3> <p>The missing layer is not “more workflow nodes.” It is a communication and contract layer:</p> <div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Harness-mediated request:
+  caller -&gt; contract/service -&gt; response -&gt; trace
+
+Examples:
+  policy -&gt; target.benchmark(candidate) -&gt; BenchmarkResult
+  policy -&gt; objective.check_completion(evidence) -&gt; CompletionDecision
+  policy -&gt; review.review(packet) -&gt; ReviewDecision
+  policy -&gt; memory.select(task, files) -&gt; KnowledgePacket
+</code></pre></div></div> <p>This layer gives several benefits:</p> <ul> <li>Components are only defined when needed.</li> <li>Services can be traced uniformly.</li> <li>Agents can inspect the traces and improve the system.</li> <li>Workflow can stay decoupled from target-specific details.</li> <li>The same project can start simple and add structure over time.</li> </ul> <h3 id="what-puppeteer-should-provide-easily">What Puppeteer Should Provide Easily</h3> <p>The case studies point to a concrete product surface.</p> <p>Puppeteer should make these easy:</p> <ol> <li>Define an objective contract with optional authoring fields: outcome, evidence, constraints, boundaries, iteration policy, blocked condition.</li> <li>Define target services: run benchmark, check correctness, inspect artifacts, compare candidates, extract strategy scopes.</li> <li>Define review services: summary review, diff review, evidence review, claim-ledger review.</li> <li>Define gates: deterministic checks before model judgement.</li> <li>Define policies: simple workflow, Humanize-like RLCR, Codex-goal-like continuation, or custom target evolution loop.</li> <li>Record traces: every request, response, degraded output, evidence packet, review decision, state transition, and blocked reason.</li> <li>Support progressive disclosure: a user can run a workflow-only harness first, then add contracts and services only when the target needs them.</li> </ol> <h3 id="a-minimal-puppeteer-like-shape">A Minimal Puppeteer-Like Shape</h3> <div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">objective</span> <span class="o">=</span> <span class="n">harness</span><span class="p">.</span><span class="nf">contract</span><span class="p">(</span><span class="sh">"</span><span class="s">objective</span><span class="sh">"</span><span class="p">)</span>
+<span class="n">target</span> <span class="o">=</span> <span class="n">harness</span><span class="p">.</span><span class="nf">contract</span><span class="p">(</span><span class="sh">"</span><span class="s">target</span><span class="sh">"</span><span class="p">)</span>
+<span class="n">review</span> <span class="o">=</span> <span class="n">harness</span><span class="p">.</span><span class="nf">service</span><span class="p">(</span><span class="sh">"</span><span class="s">review</span><span class="sh">"</span><span class="p">)</span>
+
+<span class="nd">@policy.on</span><span class="p">(</span><span class="sh">"</span><span class="s">round</span><span class="sh">"</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">evolve</span><span class="p">(</span><span class="n">ctx</span><span class="p">):</span>
+    <span class="n">candidate</span> <span class="o">=</span> <span class="n">ctx</span><span class="p">.</span><span class="n">agent</span><span class="p">.</span><span class="nf">propose_change</span><span class="p">(</span><span class="n">objective</span><span class="p">.</span><span class="nf">current</span><span class="p">())</span>
+    <span class="n">evidence</span> <span class="o">=</span> <span class="n">target</span><span class="p">.</span><span class="nf">evaluate</span><span class="p">(</span><span class="n">candidate</span><span class="p">)</span>
+    <span class="n">decision</span> <span class="o">=</span> <span class="n">review</span><span class="p">.</span><span class="nf">check</span><span class="p">(</span><span class="n">objective</span><span class="o">=</span><span class="n">objective</span><span class="p">.</span><span class="nf">snapshot</span><span class="p">(),</span> <span class="n">evidence</span><span class="o">=</span><span class="n">evidence</span><span class="p">)</span>
+
+    <span class="n">ctx</span><span class="p">.</span><span class="n">trace</span><span class="p">.</span><span class="nf">record</span><span class="p">(</span><span class="n">candidate</span><span class="o">=</span><span class="n">candidate</span><span class="p">,</span> <span class="n">evidence</span><span class="o">=</span><span class="n">evidence</span><span class="p">,</span> <span class="n">decision</span><span class="o">=</span><span class="n">decision</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">decision</span><span class="p">.</span><span class="n">complete</span><span class="p">:</span>
+        <span class="n">objective</span><span class="p">.</span><span class="nf">update_by_model</span><span class="p">(</span><span class="sh">"</span><span class="s">complete</span><span class="sh">"</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="n">decision</span><span class="p">.</span><span class="n">blocking</span><span class="p">:</span>
+        <span class="n">objective</span><span class="p">.</span><span class="nf">record_blocker</span><span class="p">(</span><span class="n">decision</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">ctx</span><span class="p">.</span><span class="n">agent</span><span class="p">.</span><span class="nf">continue_with</span><span class="p">(</span><span class="n">decision</span><span class="p">.</span><span class="nf">next_prompt</span><span class="p">())</span>
+</code></pre></div></div> <p>This sketch is intentionally not a fixed workflow DSL. It is normal code calling contracts and services through a harness.</p> <h2 id="takeaways">Takeaways</h2> <p>Humanize h1 shows why a long-task coding loop needs plans, round contracts, cheap gates, review pressure, memory discipline, drift recovery, and methodology analysis.</p> <p>Codex review shows how a narrowly scoped review service should work: typed target, reduced tool surface, structured output, fallback, lifecycle events, and optional detached delivery.</p> <p>Codex goals show how a durable objective should work: persisted state, caller-specific permissions, runtime accounting, safe continuation, budget/usage statuses, external mutation handling, and completion audits.</p> <p>The OpenAI Cookbook shows the missing human-facing layer: a goal should encode outcome, evidence, constraints, boundaries, iteration policy, and blocked stop condition.</p> <p>Puppeteer should not simply copy any one of these. Its job is to provide the outside framework where target projects can define their own contracts and services, agents can operate through those interfaces, and the harness can trace and improve the whole process.</p>]]></content><author><name></name></author><category term="agent-systems"/><category term="agent-harness"/><category term="workflow"/><category term="codex"/><category term="humanize"/><category term="puppeteer"/><summary type="html"><![CDATA[A workflow-focused study of two agent harness mechanisms: Humanize h1's RLCR loop and Codex's review and goal systems.]]></summary></entry><entry><title type="html">(Paper Reading) Event Tensor: A Unified Abstraction for Compiling Dynamic Megakernel</title><link href="https://uv-xiao.github.io/blog/2026/event-tensor-dynamic-megakernel/" rel="alternate" type="text/html" title="(Paper Reading) Event Tensor: A Unified Abstraction for Compiling Dynamic Megakernel"/><published>2026-04-21T00:00:00+00:00</published><updated>2026-04-21T00:00:00+00:00</updated><id>https://uv-xiao.github.io/blog/2026/event-tensor-dynamic-megakernel</id><content type="html" xml:base="https://uv-xiao.github.io/blog/2026/event-tensor-dynamic-megakernel/"><![CDATA[<pre><code class="language-txt">@misc{jin2026eventtensor,
   title = {Event Tensor: A Unified Abstraction for Compiling Dynamic Megakernel},
   author = {Jin, Hongyi and Hou, Bohan and Wang, Guanjie and Lai, Ruihang and Chen, Jinqi and Ye, Zihao and Cai, Yaxing and Dong, Yixin and Cheng, Xinhao and Zhang, Zhihao and Zhao, Yilong and Huang, Yingyi and Yang, Lijie and Jiang, Jinchen and Oliaro, Gabriele and Ji, Jianan and Miao, Xupeng and Grover, Vinod and Mowry, Todd C. and Jia, Zhihao and Chen, Tianqi},
   year = {2026},
@@ -2037,18 +2532,4 @@ vec_sqrt_add(a, b)  // One instruction instead of n*2!
 </code></pre> <p><strong>Incremental Everything:</strong></p> <ul> <li>Your program changed? Egglog updates just what’s needed</li> <li>No more “rebuild the world” after every edit</li> <li>It’s like Git for your optimizer’s brain</li> </ul> <p><strong>The Killer App I’m Waiting For:</strong> Security analysis + optimization in one pass. “This is equivalent AND secure AND fast.”</p> <h2 id="the-future-where-this-is-all-going">The Future: Where This is All Going</h2> <h3 id="the-scalability-wall">The Scalability Wall</h3> <p>Current challenge: E-graphs get HUGE for big programs. Like, “eat all your RAM and ask for seconds” huge.</p> <h3 id="ml--e-graphs--️">ML + E-graphs = ❤️</h3> <p>The hot new thing: Teaching e-graphs to be smarter with machine learning.</p> <p><strong>Learning What’s Important:</strong></p> <div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1"># Old way: Try everything!
 # New way: ML says "try this first, it usually works"
 </span><span class="n">model</span><span class="p">.</span><span class="nf">predict_best_rewrite</span><span class="p">(</span><span class="n">expression</span><span class="p">)</span>
-</code></pre></div></div> <p>There are some works on EGRAPH 2025 for this topic.</p> <h3 id="the-theory-gap">The Theory Gap</h3> <p>We’re using e-graphs everywhere, but the theory is playing catch-up:</p> <ul> <li>When exactly does equality saturation terminate?</li> <li>Can we prove extraction finds the optimal solution?</li> <li>What are the complexity bounds?</li> </ul> <p>It’s like we invented cars before understanding thermodynamics. It works, but we’re not always sure why!</p> <h2 id="wrapping-up-why-this-matters">Wrapping Up: Why This Matters</h2> <h3 id="the-journey-so-far">The Journey So Far</h3> <p>We’ve come a long way from “apply rules and hope for the best”:</p> <ol> <li><strong>Term Rewriting</strong>: The old way. One rule at a time, fingers crossed.</li> <li><strong>E-graphs</strong>: Keep everything! Build a map of all possibilities.</li> <li><strong>Equality Saturation</strong>: Explore everything! Find the best path.</li> <li><strong>egg</strong>: Make it fast and usable for mortals.</li> <li><strong>Egglog</strong>: Add reasoning and logic to the mix.</li> </ol> <h3 id="why-you-should-care">Why You Should Care</h3> <p>E-graphs aren’t just another optimization technique. They’re a fundamentally different way of thinking about program transformation:</p> <p><strong>Before</strong>: “What’s the right order to apply optimizations?” <strong>After</strong>: “What if we didn’t have to choose?”</p> <p>It’s like the difference between taking one photo and hoping it’s good vs. taking 1000 photos and picking the best one. Except the camera (egg) is really fast now.</p> <h3 id="my-take">My Take</h3> <p>After working with e-graphs, going back to traditional optimization feels like coding with one hand tied behind my back. Yes, extraction is NP-hard. Yes, e-graphs can explode in size. But the ability to explore the entire optimization space and <em>know</em> you’re not missing opportunities? That’s powerful.</p> <h3 id="the-bottom-line">The Bottom Line</h3> <p>E-graphs and equality saturation represent a paradigm shift in how we think about optimization. By keeping all possibilities alive and exploring them simultaneously, we’ve opened doors that were previously locked by the phase ordering problem.</p> <p>Is it perfect? No. Is it the future? I think so.</p>]]></content><author><name></name></author><category term="survey"/><category term="term-rewriting"/><category term="e-graphs"/><category term="optimization"/><summary type="html"><![CDATA[How e-graphs turn the optimizer's dilemma into a solved problem by keeping all the good ideas at once, featuring real examples, bad jokes, and the magic of egg]]></summary></entry><entry><title type="html">Glancing at the Simulation Landscape</title><link href="https://uv-xiao.github.io/blog/2025/sim/" rel="alternate" type="text/html" title="Glancing at the Simulation Landscape"/><published>2025-07-01T00:00:00+00:00</published><updated>2025-07-01T00:00:00+00:00</updated><id>https://uv-xiao.github.io/blog/2025/sim</id><content type="html" xml:base="https://uv-xiao.github.io/blog/2025/sim/"><![CDATA[<p>Recent papers to read:</p> <ul class="task-list"> <li class="task-list-item"><input type="checkbox" class="task-list-item-checkbox" disabled="disabled"/>Assassyn: A Unified Abstraction for Architectural Simulation and Implementation</li> <li class="task-list-item"><input type="checkbox" class="task-list-item-checkbox" disabled="disabled"/>Concorde: Fast and Accurate CPU Performance Modeling with Compositional Analytical-ML Fusion</li> <li class="task-list-item"><input type="checkbox" class="task-list-item-checkbox" disabled="disabled"/>Performance Interfaces for Hardware Accelerators</li> </ul> <p>Maybe write things for each of them? If I have time🥹</p> <h1 id="the-simulation-landscape-pick-your-poison">The Simulation Landscape: Pick Your Poison</h1> <p>Ever had a brilliant idea for a new processor feature at 2 AM? Maybe you thought, “what if we had a cache that could predict the future?” or “could we make branch prediction psychic?” Welcome to the wonderful, frustrating, occasionally maddening world of computer architecture simulation!</p> <p>Choosing the right simulator is like picking a character in an RPG: Do you go for the slow, powerful wizard (gem5) that can model anything but takes forever? Or the speedy rogue (zSim) that gets you results fast but might miss some details? Maybe you’re feeling rich and want the ultimate pay-to-win option (FireSim on AWS)?</p> <p>After years of banging my head against various simulators (and occasionally wanting to throw my laptop out the window), I’ve learned that each tool has its own personality, quirks, and sweet spots. This post is my attempt to save you some pain and help you pick the right tool for your research without losing your sanity.</p> <h2 id="architectural-simulators-where-dreams-meet-reality-very-very-slowly">Architectural Simulators: Where Dreams Meet Reality (Very, Very Slowly)</h2> <p>Architectural simulators are where most of us start our journey. These bad boys model your processor at the microarchitectural level - think pipelines, caches, branch predictors, the works. The catch? They’re not exactly speed demons. But hey, when you need to know <em>exactly</em> how many cycles your brilliant idea saves, these are your friends.</p> <h3 id="gem5-the-all-powerful-all-complicated-behemoth">gem5: The All-Powerful, All-Complicated Behemoth</h3> <p>Ah, gem5 <a href="https://research.cs.wisc.edu/multifacet/papers/can11_gem5.pdf">Binkert et al., “The gem5 simulator,” 2011</a>. If computer architecture simulators were cars, gem5 would be a Formula 1 car that you have to assemble yourself from 10,000 parts while reading documentation written by someone who assumes you already built five F1 cars.</p> <p><strong>The Good:</strong></p> <ul> <li>Can model basically anything. Want a 128-core processor with a telepathic cache? gem5’s got you.</li> <li>Multiple CPU models from dead simple (AtomicSimple) to “why does this have so many pipeline stages” (O3)</li> <li>Full-system simulation - yes, it can boot Linux. Very. Very. Slowly.</li> <li>Supports every ISA under the sun: ARM, x86, RISC-V, and probably some alien architectures</li> </ul> <p><strong>The Reality Check:</strong></p> <ul> <li>Simulation speed: 10-200 KIPS. That’s Kilo-Instructions Per Second. Not Mega. Not Giga. <em>Kilo</em>.</li> <li>My first gem5 setup took a week and more coffee than I care to admit</li> <li>The configuration system is “flexible” in the same way quantum mechanics is “intuitive”</li> <li>Memory usage scales with complexity - I’ve seen gem5 eat 64GB of RAM and ask for seconds</li> </ul> <p><strong>When to Use gem5:</strong></p> <ul> <li>Your advisor said “use gem5” (the most common reason)</li> <li>You need to publish a paper and reviewers expect gem5 results</li> <li>You’re modeling something genuinely novel that needs cycle-accurate detail</li> <li>You have infinite patience or really good coffee</li> </ul> <p><strong>Pro Tip:</strong> Start with the gem5 bootcamp examples. Don’t try to build your dream processor on day one. Trust me on this.</p> <h3 id="zsim-the-speed-demon-from-mit">zSim: The Speed Demon from MIT</h3> <p>zSim <a href="https://people.csail.mit.edu/sanchez/papers/2013.zsim.isca.pdf">Sanchez &amp; Kozyrakis, “ZSim: Fast and accurate microarchitectural simulation of thousand-core systems,” ISCA 2013</a> is what happens when someone at MIT gets fed up with gem5’s speed and decides to do something about it. The result? A simulator that’s actually fast enough to finish experiments before the conference deadline.</p> <p><strong>The Magic Sauce:</strong></p> <ul> <li><strong>Bound-Weave Parallelization</strong>: Sounds fancy, but basically means “we figured out how to parallelize the hell out of this”</li> <li><strong>Pin-based execution</strong>: Rides on Intel Pin like a rocket-powered skateboard</li> <li><strong>Instruction-driven timing</strong>: Instead of simulating every cycle (like gem5’s masochistic approach), zSim says “let’s just figure out how long each instruction takes”</li> </ul> <p><strong>Real Talk Performance:</strong></p> <ul> <li>10s to 1000s MIPS - that’s <em>Millions</em> with an M!</li> <li>I’ve seen 100× speedups over gem5. Not a typo.</li> <li>Can actually simulate real workloads without growing a beard</li> </ul> <p><strong>The Catch:</strong></p> <ul> <li>Less detailed than gem5 (but often good enough)</li> <li>x86-only last I checked</li> <li>Some microarchitectural details are approximated</li> </ul> <p><strong>When to Use zSim:</strong></p> <ul> <li>You need results this decade</li> <li>You’re studying multicore systems (it scales beautifully)</li> <li>Your research is more about cache hierarchies than pipeline details</li> <li>You value your sanity</li> </ul> <h3 id="sst-when-you-need-to-simulate-a-supercomputer">SST: When You Need to Simulate a Supercomputer</h3> <p>SST <a href="https://dl.acm.org/doi/10.1145/1964218.1964225">Rodrigues et al., “The structural simulation toolkit,” ACM SIGMETRICS 2011</a> is what happens when the folks at Sandia National Labs need to simulate something bigger than your average processor. This is the tool for when you’re thinking less “how many cache misses?” and more “how do 10,000 nodes talk to each other without catching fire?”</p> <p><strong>What Makes SST Special:</strong></p> <ul> <li>Component-based design - like LEGO blocks for supercomputers</li> <li>Actually runs in parallel (because simulating parallel systems serially is just sad)</li> <li>Plays nice with other simulators - the diplomatic option</li> <li>Network modeling that doesn’t make you cry</li> </ul> <p><strong>Perfect For:</strong></p> <ul> <li>“I need to simulate an entire datacenter” problems</li> <li>Network topology research (mesh? torus? hypercube? SST’s got you)</li> <li>When your scale unit is racks, not cores</li> </ul> <h3 id="dam-for-when-von-neumann-just-isnt-weird-enough">DAM: For When Von Neumann Just Isn’t Weird Enough</h3> <p>DAM <a href="https://ppl.stanford.edu/papers/DAM_ISCA24.pdf">Zhang et al., “The Dataflow Abstract Machine Simulator Framework,” ISCA 2024</a> is the rebel of the simulation world. While everyone else is simulating nice, orderly von Neumann machines, DAM is over here simulating dataflow architectures - where data flows like water and control flow is more of a suggestion.</p> <p>DAM uses a clever CSP (Communicating Sequential Processes) programming model with “contexts” (nodes) and “channels” (edges). It avoids global synchronization bottlenecks through a scalable point-to-point scheme, making it possible to simulate systems with thousands of components. Think of it as building a massive water park where each slide (context) runs independently, connected by pipes (channels) that handle the flow timing automatically.</p> <p><strong>The Dataflow Difference:</strong></p> <ul> <li>No program counter? No problem!</li> <li>Event-driven simulation because instructions execute when they damn well please</li> <li>Perfect for those “what if we completely rethink computing” moments</li> </ul> <p><strong>Use This When:</strong></p> <ul> <li>You’re exploring dataflow processors (there are dozens of us!)</li> <li>Stream processing is your jam</li> <li>You enjoy explaining to people why your processor doesn’t have a program counter</li> </ul> <h3 id="compiler-driven-simulation-when-your-compiler-becomes-a-crystal-ball">Compiler-Driven Simulation: When Your Compiler Becomes a Crystal Ball</h3> <p>This approach <a href="https://arxiv.org/abs/2202.00739">Li et al., “Compiler-Driven Simulation of Reconfigurable Hardware Accelerators,” HPCA 2022</a> is the new hotness - letting your compiler figure out how fast your accelerator will run before you even build it. It’s like having a fortune teller for your hardware designs, except it actually works (most of the time).</p> <p><strong>The EQueue Magic:</strong> The paper introduces the Event Queue (EQueue) dialect of MLIR that sits perfectly between “too low-level” RTL and “too high-level” models. EQueue can:</p> <ul> <li>Model arbitrary hardware with explicit data movement</li> <li>Use distributed event-based control (no global clock headaches!)</li> <li>Guide design improvements with visualizable outputs</li> <li>Match RTL accuracy while being way easier to modify</li> </ul> <p><strong>Real Impact:</strong> They showed it working on systolic arrays and SIMD processors, proving you can have your cake (accuracy) and eat it too (fast iteration).</p> <p><strong>Why This is Actually Cool:</strong></p> <ul> <li>Design space exploration without wanting to quit grad school</li> <li>Test 100 accelerator variants in the time it takes to simulate one in RTL</li> <li>Hardware/software co-design that doesn’t require a PhD in both</li> </ul> <h2 id="rtl-simulators-where-the-rubber-meets-the-road">RTL Simulators: Where the Rubber Meets the Road</h2> <h3 id="verilator-the-peoples-champion-of-rtl-simulation">Verilator: The People’s Champion of RTL Simulation</h3> <p>Verilator <a href="https://veripool.org/papers/">Snyder, “Verilator and SystemPerl,” 2004</a> is what happens when the open-source community says “screw expensive commercial simulators” and builds something better. It takes your Verilog, turns it into C++, and runs it at speeds that make other simulators jealous.</p> <p><strong>Why Verilator Rocks:</strong></p> <ul> <li>Verilog → C++ → ZOOM ZOOM</li> <li>Free as in freedom (and beer)</li> <li>Actually fast enough to run real software on your simulated CPU</li> <li>Used by basically every RISC-V project ever</li> </ul> <p><strong>The Speed Secret:</strong></p> <ul> <li>Compiles your hardware to software (meta, right?)</li> <li>No interpreter overhead - just raw compiled code</li> <li>I’ve seen 100× speedups over traditional simulators</li> </ul> <p><strong>Perfect For:</strong></p> <ul> <li>“I need to verify my RISC-V core” (join the club!)</li> <li>Pre-silicon software development</li> <li>When you need cycle-accurate but also want results today</li> <li>Impressing your friends with open-source superiority</li> </ul> <h3 id="cuttlesim-for-the-functional-programming-hardware-nerds">Cuttlesim: For the Functional Programming Hardware Nerds</h3> <p>Cuttlesim <a href="https://pit-claudel.fr/clement/papers/cuttlesim-ASPLOS21.pdf">Pit-Claudel et al., “Effective simulation and debugging for a high-level hardware language using software compilers,” ASPLOS 2021</a> is what you get when someone looks at Verilog and says “you know what this needs? More monads!” It’s the simulator for Koika, a hardware description language that brings functional programming to hardware design.</p> <p><strong>The Secret Sauce:</strong> Cuttlesim beats state-of-the-art RTL simulators by 2-5× by being smart about Koika’s “early-exit” semantics. Instead of simulating every wire wiggle, it compiles rules directly to C++ that’s optimized for how CPUs actually work. The generated code is so clean you can debug your hardware using GDB. Yes, really.</p> <p><strong>The Koika Philosophy:</strong></p> <ul> <li>Hardware as concurrent rules that <em>appear</em> atomic (mind = blown)</li> <li>Formal verification built-in (bugs are so mainstream)</li> <li>Think Bluespec but with a PhD in type theory</li> <li>People who think Verilog isn’t abstract enough</li> <li>Researchers exploring “what if hardware design didn’t suck?”</li> <li>Those who enjoy explaining monads AND flip-flops at parties</li> </ul> <h2 id="fpga-emulation-when-software-just-isnt-cutting-it">FPGA Emulation: When Software Just Isn’t Cutting It</h2> <h3 id="firesim-the-i-have-grant-money-option">FireSim: The “I Have Grant Money” Option</h3> <p>FireSim <a href="https://www2.eecs.berkeley.edu/Pubs/TechRpts/2018/EECS-2018-154.pdf">Karandikar et al., “FireSim: FPGA-accelerated cycle-exact scale-out system simulation in the public cloud,” ISCA 2018</a> is what happens when Berkeley researchers look at AWS F1 instances and think “you know what would be cool? Simulating an entire datacenter on these bad boys.” And then they actually did it, the absolute madlads.</p> <p><strong>The FireSim Magic:</strong></p> <ul> <li><strong>Golden Gate Compiler</strong>: Takes your RTL and makes it cloud-ready (no sacrifice required)</li> <li><strong>AWS F1 Integration</strong>: Hope you have that grant money ready!</li> <li><strong>Distributed Simulation</strong>: Because why simulate one chip when you can simulate thousands?</li> </ul> <p><strong>What You Can Actually Do:</strong></p> <ul> <li>Simulate thousands of cores without your lab catching fire</li> <li>Run real software stacks at decent speeds</li> <li>Test datacenter-scale ideas without buying a datacenter</li> <li>Make your advisor very happy (and very poor)</li> </ul> <p><strong>Performance That Makes You Smile:</strong></p> <ul> <li>10-100× faster than software simulation</li> <li>Can run real workloads in reasonable time</li> <li>Network simulation that actually behaves like a network</li> </ul> <p><strong>The Price of Glory:</strong></p> <ul> <li>AWS bills that make you question your life choices</li> <li>Setup complexity that requires a PhD in cloud computing</li> <li>“Did you remember to terminate those instances?” anxiety</li> </ul> <p><strong>Perfect For:</strong></p> <ul> <li>Datacenter research with actual scale</li> <li>“What if we had 1000 cores?” questions</li> <li>Impressing reviewers with scale</li> <li>Spending someone else’s money on AWS</li> </ul> <h2 id="the-speed-accuracy-trade-off-visualized">The Speed-Accuracy Trade-off Visualized</h2> <p>Before we dive into FPGA solutions, let me show you the fundamental trade-off in simulation land:</p> <pre><code class="language-mermaid">quadrantChart
-    title Simulation Speed vs. Accuracy Trade-off
-    x-axis "Slow as Molasses" --&gt; "Actually Usable"
-    y-axis "Good Enough" --&gt; "Cycle-Perfect"
-    quadrant-1 "Academic Gold Standard"
-    quadrant-2 "Sweet Spot"
-    quadrant-3 "Why Bother?"
-    quadrant-4 "Quick &amp; Dirty"
-    "gem5": [0.4, 0.6]
-    "Verilator": [0.15, 0.85]
-    "SST": [0.7, 0.55]
-    "zSim": [0.8, 0.4]
-    "FireSim": [0.85, 0.85]
-    "Compiler-Driven": [0.5, 0.35]
-</code></pre> <h2 id="the-bottom-line-which-simulator-should-you-use">The Bottom Line: Which Simulator Should You Use?</h2> <p>After all this, you’re probably wondering “just tell me which one to use!” Here’s my totally biased but battle-tested advice:</p> <h3 id="the-quick-reference-guide">The Quick Reference Guide</h3> <table class="table-responsive"> <thead> <tr> <th style="text-align: left">Simulator</th> <th style="text-align: center">Speed</th> <th style="text-align: center">Accuracy</th> <th style="text-align: left">Best For</th> <th style="text-align: left">Avoid If</th> </tr> </thead> <tbody> <tr> <td style="text-align: left">gem5</td> <td style="text-align: center">🐌</td> <td style="text-align: center">🎯🎯[🎯]?</td> <td style="text-align: left">Papers, microarch details</td> <td style="text-align: left">You have deadlines</td> </tr> <tr> <td style="text-align: left">zSim</td> <td style="text-align: center">🚀🚀</td> <td style="text-align: center">🎯[🎯]?</td> <td style="text-align: left">Multicore, cache studies</td> <td style="text-align: left">You need RTL accuracy</td> </tr> <tr> <td style="text-align: left">SST</td> <td style="text-align: center">🚀</td> <td style="text-align: center">🎯🎯</td> <td style="text-align: left">Networks, large systems</td> <td style="text-align: left">You’re studying single cores</td> </tr> <tr> <td style="text-align: left">Verilator</td> <td style="text-align: center">🐌🐌</td> <td style="text-align: center">🎯🎯🎯</td> <td style="text-align: left">RTL verification</td> <td style="text-align: left">You hate Verilog</td> </tr> <tr> <td style="text-align: left">FireSim</td> <td style="text-align: center">🚀🚀</td> <td style="text-align: center">🎯🎯🎯</td> <td style="text-align: left">Scale + accuracy</td> <td style="text-align: left">You’re paying</td> </tr> </tbody> </table> <h3 id="what-each-tool-does-best">What Each Tool Does Best</h3> <ul> <li><strong>Need to model a complex out-of-order core?</strong> gem5 (and patience)</li> <li><strong>Studying cache hierarchies?</strong> zSim all day</li> <li><strong>Building a network-on-chip?</strong> SST has your back</li> <li><strong>Verifying your Verilog?</strong> Verilator is your friend</li> <li><strong>Prefering rule-based HDLs?</strong> Cuttlesim</li> <li><strong>Simulating a datacenter?</strong> FireSim (and a credit card)</li> <li><strong>Exploring weird architectures?</strong> DAM/EQueue for dataflow</li> </ul> <h3 id="the-learning-curve-reality-check">The Learning Curve Reality Check</h3> <ul> <li><strong>“I Can Figure This Out in a Day”</strong>: Verilator (if you know Verilog)</li> <li><strong>“Give Me a Week”</strong>: zSim, SST basics</li> <li><strong>“This is My Semester Project”</strong>: gem5 mastery, FireSim setup</li> <li><strong>“I Now Have Stockholm Syndrome”</strong>: gem5 Ruby, custom FPGA platforms</li> </ul> <h2 id="wheres-this-all-going-the-crystal-ball-section">Where’s This All Going? The Crystal Ball Section</h2> <h3 id="ml-everything-because-of-course">ML Everything (Because Of Course)</h3> <p>Everyone’s slapping ML onto their simulators now:</p> <ul> <li><strong>Performance Prediction</strong>: “What if we just guess instead of simulating?” (Sometimes works!)</li> <li><strong>Smart Workload Generation</strong>: ML picks representative benchmarks so you don’t have to</li> <li><strong>Design Space Exploration</strong>: Let the robots find your optimal cache size</li> </ul> <h2 id="wrapping-up-the-survival-guide">Wrapping Up: The Survival Guide</h2> <h3 id="the-philosophy">The Philosophy</h3> <p>At the end of the day, simulators are just tools. The best simulator is the one that answers your research question without driving you to madness. Sometimes that’s gem5 grinding away for days. Sometimes it’s a quick zSim run that gets you 80% of the answer in an hour.</p> <p>Choose wisely, simulate responsibly, and remember: every KIPS of gem5 simulation is building character. Or at least that’s what I tell myself while waiting for results.</p> <p>Happy simulating! May your runs be fast and your results be publishable. 🚀</p> <hr/> <h2 id="appendix-resources-that-will-actually-help">Appendix: Resources That Will Actually Help</h2> <h3 id="getting-started-guides-that-dont-suck">Getting Started Guides That Don’t Suck</h3> <p><strong>gem5</strong>: Start with the <a href="https://github.com/gem5bootcamp/bootcamp">gem5 bootcamp</a>. Actually do the exercises. Yes, all of them.</p> <p><strong>zSim</strong>: The <a href="https://github.com/s5z/zsim">tutorial</a> is decent. The real learning happens when you try to add your first feature.</p> <p>… more to come</p>]]></content><author><name></name></author><category term="survey"/><category term="simulation"/><category term="architecture"/><summary type="html"><![CDATA[Survey on simulation tools for computer architecture research]]></summary></entry></feed>
+</code></pre></div></div> <p>There are some works on EGRAPH 2025 for this topic.</p> <h3 id="the-theory-gap">The Theory Gap</h3> <p>We’re using e-graphs everywhere, but the theory is playing catch-up:</p> <ul> <li>When exactly does equality saturation terminate?</li> <li>Can we prove extraction finds the optimal solution?</li> <li>What are the complexity bounds?</li> </ul> <p>It’s like we invented cars before understanding thermodynamics. It works, but we’re not always sure why!</p> <h2 id="wrapping-up-why-this-matters">Wrapping Up: Why This Matters</h2> <h3 id="the-journey-so-far">The Journey So Far</h3> <p>We’ve come a long way from “apply rules and hope for the best”:</p> <ol> <li><strong>Term Rewriting</strong>: The old way. One rule at a time, fingers crossed.</li> <li><strong>E-graphs</strong>: Keep everything! Build a map of all possibilities.</li> <li><strong>Equality Saturation</strong>: Explore everything! Find the best path.</li> <li><strong>egg</strong>: Make it fast and usable for mortals.</li> <li><strong>Egglog</strong>: Add reasoning and logic to the mix.</li> </ol> <h3 id="why-you-should-care">Why You Should Care</h3> <p>E-graphs aren’t just another optimization technique. They’re a fundamentally different way of thinking about program transformation:</p> <p><strong>Before</strong>: “What’s the right order to apply optimizations?” <strong>After</strong>: “What if we didn’t have to choose?”</p> <p>It’s like the difference between taking one photo and hoping it’s good vs. taking 1000 photos and picking the best one. Except the camera (egg) is really fast now.</p> <h3 id="my-take">My Take</h3> <p>After working with e-graphs, going back to traditional optimization feels like coding with one hand tied behind my back. Yes, extraction is NP-hard. Yes, e-graphs can explode in size. But the ability to explore the entire optimization space and <em>know</em> you’re not missing opportunities? That’s powerful.</p> <h3 id="the-bottom-line">The Bottom Line</h3> <p>E-graphs and equality saturation represent a paradigm shift in how we think about optimization. By keeping all possibilities alive and exploring them simultaneously, we’ve opened doors that were previously locked by the phase ordering problem.</p> <p>Is it perfect? No. Is it the future? I think so.</p>]]></content><author><name></name></author><category term="survey"/><category term="term-rewriting"/><category term="e-graphs"/><category term="optimization"/><summary type="html"><![CDATA[How e-graphs turn the optimizer's dilemma into a solved problem by keeping all the good ideas at once, featuring real examples, bad jokes, and the magic of egg]]></summary></entry></feed>

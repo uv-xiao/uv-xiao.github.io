@@ -1,0 +1,496 @@
+<!DOCTYPE html> <html lang="en"> <head> <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"> <meta charset="utf-8"> <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no"> <meta http-equiv="X-UA-Compatible" content="IE=edge"> <title> Agent Harness, Part 1: Workflow Mechanisms in Humanize h1 and Codex | Youwei Xiao </title> <meta name="author" content="Youwei Xiao"> <meta name="description" content="A workflow-focused study of two agent harness mechanisms: Humanize h1's RLCR loop and Codex's review and goal systems."> <meta name="keywords" content="compilers, hardware synthesis, DSL, MLSys, EDA, e-graphs, FPGA, ASIC"> <link rel="stylesheet" href="/assets/css/bootstrap.min.css?a4b3f509e79c54a512b890d73235ef04"> <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/mdbootstrap@4.20.0/css/mdb.min.css" integrity="sha256-jpjYvU3G3N6nrrBwXJoVEYI/0zw8htfFnhT9ljN3JJw=" crossorigin="anonymous"> <link defer rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-table@1.22.4/dist/bootstrap-table.min.css" integrity="sha256-uRX+PiRTR4ysKFRCykT8HLuRCub26LgXJZym3Yeom1c=" crossorigin="anonymous"> <link defer rel="stylesheet" href="/assets/css/academicons.min.css?f0b7046b84e425c55f3463ac249818f5"> <link defer rel="stylesheet" type="text/css" href="https://fonts.googleapis.com/css2?family=Share+Tech&amp;family=JetBrains+Mono:wght@400;500;600&amp;family=Indie+Flower:wght@400&amp;family=Material+Icons&amp;display=swap"> <link defer rel="stylesheet" href="/assets/css/jekyll-pygments-themes-github.css?591dab5a4e56573bf4ef7fd332894c99" media="" id="highlight_theme_light"> <link defer href="/assets/css/bootstrap-toc.min.css?6f5af0bb9aab25d79b2448143cbeaa88" rel="stylesheet"> <link defer rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pseudocode@2.4.1/build/pseudocode.min.css" integrity="sha256-VwMV//xgBPDyRFVSOshhRhzJRDyBmIACniLPpeXNUdc=" crossorigin="anonymous"> <link rel="icon" type="image/x-icon" href="/assets/img/favicon.ico?5c8818a77ad8bf58aee9850c7c1d3772"> <link rel="shortcut icon" href="/assets/img/favicon.ico?5c8818a77ad8bf58aee9850c7c1d3772"> <link rel="apple-touch-icon" href="/assets/img/apple-touch-icon.png?8d14d6ff6c3359176b73f12dce1a59fb"> <link rel="stylesheet" href="/assets/css/main.css?d41d8cd98f00b204e9800998ecf8427e"> <link rel="canonical" href="https://uv-xiao.github.io/blog/2026/agent-harness-workflows/"> <script src="/assets/js/theme.js?9a0c749ec5240d9cda97bc72359a72c0"></script> <link defer rel="stylesheet" href="/assets/css/jekyll-pygments-themes-native.css?5847e5ed4a4568527aa6cfab446049ca" media="none" id="highlight_theme_dark"> <script>initTheme();</script> </head> <body class="fixed-top-nav "> <header> <nav id="navbar" class="navbar navbar-light navbar-expand-sm fixed-top" role="navigation"> <div class="container"> <a class="navbar-brand title font-weight-lighter" href="/"> Youwei Xiao </a> <button class="navbar-toggler collapsed ml-auto" type="button" data-toggle="collapse" data-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation"> <span class="sr-only">Toggle navigation</span> <span class="icon-bar top-bar"></span> <span class="icon-bar middle-bar"></span> <span class="icon-bar bottom-bar"></span> </button> <div class="collapse navbar-collapse text-right" id="navbarNav"> <ul class="navbar-nav ml-auto flex-nowrap"> <li class="nav-item "> <a class="nav-link" href="/">About </a> </li> <li class="nav-item "> <a class="nav-link" href="/cv/">CV </a> </li> <li class="nav-item "> <a class="nav-link" href="/projects/">Projects </a> </li> <li class="nav-item active"> <a class="nav-link" href="/blog/">Blog </a> </li> <li class="nav-item"> <button id="search-toggle" title="Search" onclick="openSearchModal()"> <span class="nav-link">ctrl k <i class="ti ti-search"></i></span> </button> </li> <li class="toggle-container"> <button id="light-toggle" title="Change theme"> <i class="ti ti-sun-moon" id="light-toggle-system"></i> <i class="ti ti-moon-filled" id="light-toggle-dark"></i> <i class="ti ti-sun-filled" id="light-toggle-light"></i> </button> </li> </ul> </div> </div> </nav> <progress id="progress" value="0"> <div class="progress-container"> <span class="progress-bar"></span> </div> </progress> </header> <div class="container mt-5" role="main"> <div class="row"> <div class="col-sm-3"> <nav id="toc-sidebar" class="sticky-top"></nav> </div> <div class="col-sm-9"> <div class="post"> <header class="post-header"> <h1 class="post-title">Agent Harness, Part 1: Workflow Mechanisms in Humanize h1 and Codex</h1> <p class="post-meta"> Created in May 26, 2026 </p> <p class="post-tags"> <a href="/blog/2026"> <i class="fa-solid fa-calendar fa-sm"></i> 2026 </a>   ·   <a href="/blog/tag/agent-harness"> <i class="fa-solid fa-hashtag fa-sm"></i> agent-harness</a>   <a href="/blog/tag/workflow"> <i class="fa-solid fa-hashtag fa-sm"></i> workflow</a>   <a href="/blog/tag/codex"> <i class="fa-solid fa-hashtag fa-sm"></i> codex</a>   <a href="/blog/tag/humanize"> <i class="fa-solid fa-hashtag fa-sm"></i> humanize</a>   <a href="/blog/tag/puppeteer"> <i class="fa-solid fa-hashtag fa-sm"></i> puppeteer</a>   ·   <a href="/blog/category/agent-systems"> <i class="fa-solid fa-tag fa-sm"></i> agent-systems</a> </p> </header> <article class="post-content"> <div id="table-of-contents"> <ul id="toc" class="section-nav"> <li class="toc-entry toc-h2"><a href="#sources">Sources</a></li> <li class="toc-entry toc-h2"><a href="#a-working-definition-of-harness">A Working Definition Of Harness</a></li> <li class="toc-entry toc-h2"><a href="#website-card-syntax-needed">Website Card Syntax Needed</a></li> <li class="toc-entry toc-h2"> <a href="#case-study-1-humanize-h1-rlcr">Case Study 1: Humanize h1 RLCR</a> <ul> <li class="toc-entry toc-h3"><a href="#humanize-reproduction-model">Humanize Reproduction Model</a></li> <li class="toc-entry toc-h3"><a href="#humanize-control-flow">Humanize Control Flow</a></li> <li class="toc-entry toc-h3"><a href="#start-plan-pre-check-and-quiz">Start: Plan Pre-Check And Quiz</a></li> <li class="toc-entry toc-h3"><a href="#setup-state-becomes-inspectable">Setup: State Becomes Inspectable</a></li> <li class="toc-entry toc-h3"><a href="#goal-tracker-immutable-goal-mutable-board">Goal Tracker: Immutable Goal, Mutable Board</a></li> <li class="toc-entry toc-h3"><a href="#round-contract-one-round-one-mainline-objective">Round Contract: One Round, One Mainline Objective</a></li> <li class="toc-entry toc-h3"><a href="#summary-interface-what-crosses-the-inner-review-boundary">Summary Interface: What Crosses The Inner Review Boundary</a></li> <li class="toc-entry toc-h3"><a href="#stop-hook-cheap-gates-before-model-judgement">Stop Hook: Cheap Gates Before Model Judgement</a></li> <li class="toc-entry toc-h3"><a href="#codex-summary-review-mainline-verdict">Codex Summary Review: Mainline Verdict</a></li> <li class="toc-entry toc-h3"><a href="#drift-recovery">Drift Recovery</a></li> <li class="toc-entry toc-h3"><a href="#final-diff-review">Final Diff Review</a></li> <li class="toc-entry toc-h3"><a href="#bitlesson-memory-with-selection-and-delta-validation">BitLesson: Memory With Selection And Delta Validation</a></li> <li class="toc-entry toc-h3"><a href="#methodology-analysis-the-harness-critiques-itself">Methodology Analysis: The Harness Critiques Itself</a></li> <li class="toc-entry toc-h3"> <a href="#humanize-h1-mechanism-deck">Humanize h1 Mechanism Deck</a> <ul> <li class="toc-entry toc-h4"><a href="#plan-pre-check-and-quiz">Plan pre-check and quiz</a></li> <li class="toc-entry toc-h4"><a href="#inspectable-loop-state">Inspectable loop state</a></li> <li class="toc-entry toc-h4"><a href="#goal-tracker">Goal tracker</a></li> <li class="toc-entry toc-h4"><a href="#round-contract">Round contract</a></li> <li class="toc-entry toc-h4"><a href="#summary-packet">Summary packet</a></li> <li class="toc-entry toc-h4"><a href="#cheap-stop-gates">Cheap stop gates</a></li> <li class="toc-entry toc-h4"><a href="#mainline-verdict">Mainline verdict</a></li> <li class="toc-entry toc-h4"><a href="#drift-recovery">Drift recovery</a></li> <li class="toc-entry toc-h4"><a href="#diff-review">Diff review</a></li> <li class="toc-entry toc-h4"><a href="#methodology-analysis">Methodology analysis</a></li> </ul> </li> <li class="toc-entry toc-h3"><a href="#humanize-setup-parameters">Humanize Setup Parameters</a></li> </ul> </li> <li class="toc-entry toc-h2"> <a href="#case-study-2-codex-review-and-goals">Case Study 2: Codex Review And Goals</a> <ul> <li class="toc-entry toc-h3"><a href="#codex-review-reproduction-model">Codex Review: Reproduction Model</a></li> <li class="toc-entry toc-h3"><a href="#codex-review-narrowed-sub-agent">Codex Review: Narrowed Sub-Agent</a></li> <li class="toc-entry toc-h3"><a href="#codex-review-output-handling">Codex Review: Output Handling</a></li> <li class="toc-entry toc-h3"><a href="#codex-review-inline-and-detached-delivery">Codex Review: Inline And Detached Delivery</a></li> <li class="toc-entry toc-h3"><a href="#codex-goal-reproduction-model">Codex Goal: Reproduction Model</a></li> <li class="toc-entry toc-h3"><a href="#goal-authoring-what-the-cookbook-adds">Goal Authoring: What The Cookbook Adds</a></li> <li class="toc-entry toc-h3"><a href="#codex-goal-continuation">Codex Goal Continuation</a></li> <li class="toc-entry toc-h3"><a href="#budget-and-objective-updates">Budget And Objective Updates</a></li> <li class="toc-entry toc-h3"><a href="#goal-runtime-event-switch">Goal Runtime Event Switch</a></li> <li class="toc-entry toc-h3"> <a href="#codex-mechanism-deck">Codex Mechanism Deck</a> <ul> <li class="toc-entry toc-h4"><a href="#review-target-contract">Review target contract</a></li> <li class="toc-entry toc-h4"><a href="#narrow-reviewer-service">Narrow reviewer service</a></li> <li class="toc-entry toc-h4"><a href="#structured-output-with-fallback">Structured output with fallback</a></li> <li class="toc-entry toc-h4"><a href="#inline-vs-detached-review">Inline vs detached review</a></li> <li class="toc-entry toc-h4"><a href="#goal-as-durable-state">Goal as durable state</a></li> <li class="toc-entry toc-h4"><a href="#caller-specific-permissions">Caller-specific permissions</a></li> <li class="toc-entry toc-h4"><a href="#goal-authoring-fields">Goal authoring fields</a></li> <li class="toc-entry toc-h4"><a href="#completion-audit">Completion audit</a></li> <li class="toc-entry toc-h4"><a href="#idle-continuation">Idle continuation</a></li> <li class="toc-entry toc-h4"><a href="#external-mutation-steering">External mutation steering</a></li> </ul> </li> <li class="toc-entry toc-h3"><a href="#codex-goal-setup-decisions">Codex Goal Setup Decisions</a></li> </ul> </li> <li class="toc-entry toc-h2"><a href="#comparing-the-two-harness-shapes">Comparing The Two Harness Shapes</a></li> <li class="toc-entry toc-h2"> <a href="#what-is-missing-in-these-harnesses">What Is Missing In These Harnesses?</a> <ul> <li class="toc-entry toc-h3"><a href="#1-objective-semantics-are-still-too-textual">1. Objective Semantics Are Still Too Textual</a></li> <li class="toc-entry toc-h3"><a href="#2-evidence-needs-types-and-grades">2. Evidence Needs Types And Grades</a></li> <li class="toc-entry toc-h3"><a href="#3-workflow-is-too-often-the-root-object">3. Workflow Is Too Often The Root Object</a></li> <li class="toc-entry toc-h3"><a href="#4-harness-evolution-is-not-first-class-enough">4. Harness Evolution Is Not First-Class Enough</a></li> <li class="toc-entry toc-h3"><a href="#5-the-user-interface-for-harness-power-is-still-hard">5. The User Interface For Harness Power Is Still Hard</a></li> </ul> </li> <li class="toc-entry toc-h2"> <a href="#what-this-suggests-for-puppeteer">What This Suggests For Puppeteer</a> <ul> <li class="toc-entry toc-h3"><a href="#puppeteers-missing-layer">Puppeteer’s Missing Layer</a></li> <li class="toc-entry toc-h3"><a href="#what-puppeteer-should-provide-easily">What Puppeteer Should Provide Easily</a></li> <li class="toc-entry toc-h3"><a href="#a-minimal-puppeteer-like-shape">A Minimal Puppeteer-Like Shape</a></li> </ul> </li> <li class="toc-entry toc-h2"><a href="#takeaways">Takeaways</a></li> </ul> </div> <hr> <div id="markdown-content"> <p>This is the first post in a planned series about agent harnesses. The series is broader than workflow, but workflow is the right first mechanism to study because it is where long-running agent work becomes visible as state, gates, handoffs, and evidence.</p> <p>The question is practical:</p> <blockquote> <p>If a coding agent can already edit files, run commands, and respond to feedback, what does an agent harness add?</p> </blockquote> <p>The short answer is that a harness turns a one-turn assistant into a controlled work system. It gives the agent a durable objective, scoped tools, evidence requirements, review boundaries, lifecycle events, and recovery behavior when the work drifts.</p> <p>This post studies two concrete systems:</p> <ol> <li> <strong>Humanize h1 RLCR</strong>: a workflow-oriented harness that wraps a builder agent with plans, round contracts, stop hooks, reviewer pressure, memory deltas, drift recovery, and methodology analysis.</li> <li> <strong>Codex review and goals</strong>: two narrower but very clean mechanisms: review as a bounded service, and goals as a persistent thread-level objective contract with runtime policy.</li> </ol> <p>The goal of the post is not to praise either system. It is to make their mechanisms reproducible. If you had to rebuild the useful parts from scratch, this should tell you what objects, state files, prompts, gates, and event transitions you would need.</p> <p>The final section then asks why an outside framework such as Puppeteer is still useful. That discussion is intentionally kept separate from the case studies: first we understand the systems as they are; only then do we extract design pressure for Puppeteer.</p> <h2 id="sources">Sources</h2> <p>This post is based on two in-progress mechanism studies in the Puppeteer repo:</p> <ul> <li><code class="language-plaintext highlighter-rouge">docs/in_progress/design/case_study_humanize_h1_workflow.md</code></li> <li><code class="language-plaintext highlighter-rouge">docs/in_progress/design/case_study_codex_review_goal_workflows.md</code></li> </ul> <p>Those studies inspect:</p> <ul> <li>Humanize h1 source at <code class="language-plaintext highlighter-rouge">tmp/repos/humanize</code> </li> <li>Humanize workflow presentation at <code class="language-plaintext highlighter-rouge">tmp/articles/humanize-workflow.pdf</code> </li> <li>Codex source at <code class="language-plaintext highlighter-rouge">tmp/repos/codex</code> </li> <li>OpenAI Cookbook notebook: <code class="language-plaintext highlighter-rouge">tmp/articles/using_goals_in_codex.ipynb</code> </li> </ul> <p>The explanations below are self-contained. They paraphrase and simplify the source mechanisms so the reader does not need to open those files to understand the architecture.</p> <h2 id="a-working-definition-of-harness">A Working Definition Of Harness</h2> <p>An <strong>agent harness</strong> is not just a prompt template.</p> <p>It is the system around the agent that answers questions like:</p> <ul> <li>What is the durable objective?</li> <li>What evidence proves the objective is done?</li> <li>What tools and files may the agent touch?</li> <li>What must happen before the agent is allowed to stop?</li> <li>What should be reviewed by another model or by deterministic checks?</li> <li>What happens when the agent drifts from the original goal?</li> <li>How are state, traces, summaries, failures, and lessons preserved?</li> </ul> <p>In workflow language, a harness looks like steps. In implementation, the useful pieces are more varied:</p> <div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Objective state
+  durable goal, plan, acceptance criteria, budget, lifecycle status
+
+Evidence surfaces
+  tests, benchmarks, diffs, summaries, artifacts, claim ledgers
+
+Agent adapters
+  builder, reviewer, analysis agent, sub-agent, one-shot service
+
+Gates
+  deterministic checks before model judgement
+
+Review services
+  scoped model judgement with narrower capabilities
+
+Runtime policy
+  continuation, budget handling, recovery, stop behavior
+
+Trace
+  events, summaries, review output, state transitions, methodology notes
+</code></pre></div></div> <p>That distinction matters because “workflow” is not always the right root abstraction. Sometimes the harness really is a workflow. Sometimes it is a service call. Sometimes it is persisted state plus event-driven runtime logic.</p> <h2 id="website-card-syntax-needed">Website Card Syntax Needed</h2> <p>This post uses mechanism cards heavily. The website should support horizontally scrolled card decks so a long mechanism set can stay readable without turning the page into a tall wall of repeated headings.</p> <p>Proposed Liquid syntax:</p> <div class="language-liquid highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">{%</span><span class="w"> </span><span class="nt">hcards</span><span class="w"> </span><span class="na">title</span><span class="o">=</span><span class="s2">"Humanize h1 mechanism deck"</span><span class="w"> </span><span class="cp">%}</span>
+<span class="cp">{%</span><span class="w"> </span><span class="nt">hcard</span><span class="w"> </span><span class="na">id</span><span class="o">=</span><span class="s2">"h1-01"</span><span class="w"> </span><span class="na">title</span><span class="o">=</span><span class="s2">"Plan pre-check and quiz"</span><span class="w"> </span><span class="cp">%}</span>
+Card body in Markdown.
+<span class="cp">{%</span><span class="w"> </span><span class="nt">endhcard</span><span class="w"> </span><span class="cp">%}</span>
+<span class="cp">{%</span><span class="w"> </span><span class="nt">hcard</span><span class="w"> </span><span class="na">id</span><span class="o">=</span><span class="s2">"h1-02"</span><span class="w"> </span><span class="na">title</span><span class="o">=</span><span class="s2">"Inspectable loop state"</span><span class="w"> </span><span class="cp">%}</span>
+Card body in Markdown.
+<span class="cp">{%</span><span class="w"> </span><span class="nt">endhcard</span><span class="w"> </span><span class="cp">%}</span>
+<span class="cp">{%</span><span class="w"> </span><span class="nt">endhcards</span><span class="w"> </span><span class="cp">%}</span>
+</code></pre></div></div> <p>Expected rendering:</p> <ul> <li> <code class="language-plaintext highlighter-rouge">hcards</code> renders a full-width horizontally scrollable region.</li> <li>Each <code class="language-plaintext highlighter-rouge">hcard</code> renders a fixed-width card with stable height rules and normal Markdown inside.</li> <li>Cards should be keyboard-scrollable and usable on mobile.</li> <li>The deck should not require icons.</li> <li>The syntax should degrade cleanly if CSS fails: card contents remain readable in source order.</li> </ul> <p>The draft below uses this future syntax in two card decks. The website repo will need a small Liquid block plugin and Sass before this draft can be copied directly into <code class="language-plaintext highlighter-rouge">_posts</code>.</p> <h2 id="case-study-1-humanize-h1-rlcr">Case Study 1: Humanize h1 RLCR</h2> <p>Humanize h1 is easiest to understand as a judgement loop.</p> <p>It is not “many agents doing work.” It is one builder under pressure from a plan, a state directory, stop hooks, a reviewer, memory discipline, and final methodology analysis.</p> <p>The loop’s core idea is:</p> <div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>human plan
+  -&gt; setup durable loop state
+  -&gt; builder works one round
+  -&gt; deterministic stop hook checks cheap invariants
+  -&gt; Codex reviews the builder's summary
+  -&gt; if incomplete, next round prompt narrows the work
+  -&gt; if complete, Codex reviews the final diff
+  -&gt; if clean, methodology analysis critiques the loop itself
+</code></pre></div></div> <h3 id="humanize-reproduction-model">Humanize Reproduction Model</h3> <p>To reproduce the useful part of Humanize h1, implement these objects:</p> <table> <thead> <tr> <th>Object</th> <th>Purpose</th> <th>Durable Location</th> </tr> </thead> <tbody> <tr> <td>Plan</td> <td>Original work scope and acceptance anchor.</td> <td>User-provided Markdown plan.</td> </tr> <tr> <td>State file</td> <td>Round, budget, base commit, model config, drift counters.</td> <td><code class="language-plaintext highlighter-rouge">.humanize/rlcr/&lt;timestamp&gt;/state.md</code></td> </tr> <tr> <td>Goal tracker</td> <td>Immutable goal plus mutable work board.</td> <td><code class="language-plaintext highlighter-rouge">.humanize/rlcr/&lt;timestamp&gt;/goal-tracker.md</code></td> </tr> <tr> <td>Round contract</td> <td>One local mainline objective per round.</td> <td><code class="language-plaintext highlighter-rouge">.humanize/rlcr/&lt;timestamp&gt;/round-N-contract.md</code></td> </tr> <tr> <td>Round summary</td> <td>Builder’s evidence packet for the reviewer.</td> <td><code class="language-plaintext highlighter-rouge">.humanize/rlcr/&lt;timestamp&gt;/round-N-summary.md</code></td> </tr> <tr> <td>Review result</td> <td>Codex summary review output.</td> <td><code class="language-plaintext highlighter-rouge">.humanize/rlcr/&lt;timestamp&gt;/round-N-review-result.md</code></td> </tr> <tr> <td>Review phase marker</td> <td>Marks transition from implementation to code review.</td> <td><code class="language-plaintext highlighter-rouge">.humanize/rlcr/&lt;timestamp&gt;/.review-phase-started</code></td> </tr> <tr> <td>Methodology report</td> <td>Post-run critique of the harness method.</td> <td><code class="language-plaintext highlighter-rouge">.humanize/rlcr/&lt;timestamp&gt;/methodology-analysis-report.md</code></td> </tr> </tbody> </table> <p>The important design choice is that these are not chat memories. They are files that hooks and agents can inspect. A new turn can recover the loop state by reading the directory.</p> <h3 id="humanize-control-flow">Humanize Control Flow</h3> <pre><code class="language-mermaid">flowchart TD
+  Plan[Human plan] --&gt; Precheck[Plan compliance check]
+  Precheck --&gt; Quiz[Optional understanding quiz]
+  Quiz --&gt; Setup[setup-rlcr-loop.sh]
+  Setup --&gt; Tracker[goal-tracker.md]
+  Setup --&gt; State[state.md]
+  Setup --&gt; Contract[round-0-contract.md]
+  Contract --&gt; Builder[Builder agent]
+  Builder --&gt; Summary[round-N-summary.md]
+  Builder --&gt; Stop[Stop attempt]
+  Stop --&gt; Hook[Stop hook]
+
+  Hook --&gt; Cheap{Cheap gates pass?}
+  Cheap -- no --&gt; Block[Block with specific instruction]
+  Block --&gt; Builder
+  Cheap -- yes --&gt; Review[Codex summary review]
+
+  Review -- findings --&gt; NextRound[next-round prompt]
+  NextRound --&gt; Contract
+  Review -- COMPLETE --&gt; DiffReview[codex review --base]
+  DiffReview -- priority findings --&gt; ReviewFix[review-fix prompt]
+  ReviewFix --&gt; Builder
+  DiffReview -- clean --&gt; Methodology[methodology analysis]
+  Methodology --&gt; Terminal[complete / stop / maxiter state]
+</code></pre> <p>The loop uses two different reviewers:</p> <ol> <li> <strong>Implementation review</strong> checks whether the builder’s claimed progress proves the original plan is done.</li> <li> <strong>Diff review</strong> checks whether the actual final patch has blocking code review findings.</li> </ol> <p>Those are different questions. The first is about plan completion. The second is about patch correctness.</p> <h3 id="start-plan-pre-check-and-quiz">Start: Plan Pre-Check And Quiz</h3> <p>Humanize does not start from raw user text.</p> <p>The command first tries to read the plan and ask a plan-compliance agent:</p> <div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>plan compliance checker:
+  inspect repository structure
+  check whether plan belongs to this repo
+  reject branch-switching instructions
+  return exactly:
+    PASS
+    FAIL_RELEVANCE
+    FAIL_BRANCH_SWITCH
+</code></pre></div></div> <p>If the output is malformed, the command fails closed.</p> <p>Then, unless the user opts out, it asks a quiz agent to produce two multiple choice questions and a plan summary:</p> <div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>plan understanding quiz:
+  QUESTION_1: mechanism question
+  QUESTION_2: architecture question
+  PLAN_SUMMARY
+
+if user misses questions:
+  show summary and correct answers
+  ask whether to proceed or stop
+</code></pre></div></div> <p>This quiz is advisory friction. It does not prove the plan is good. It catches the common case where a user accepts a generated plan without understanding what work is about to be delegated.</p> <h3 id="setup-state-becomes-inspectable">Setup: State Becomes Inspectable</h3> <p>Setup creates <code class="language-plaintext highlighter-rouge">.humanize/rlcr/&lt;timestamp&gt;/state.md</code>.</p> <p>The essential state shape is:</p> <div class="language-yaml highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="na">current_round</span><span class="pi">:</span> <span class="m">0</span>
+<span class="na">max_iterations</span><span class="pi">:</span> <span class="m">42</span>
+<span class="na">codex_model</span><span class="pi">:</span> <span class="s">gpt-5.5</span>
+<span class="na">codex_effort</span><span class="pi">:</span> <span class="s">high</span>
+<span class="na">codex_timeout</span><span class="pi">:</span> <span class="m">5400</span>
+<span class="na">base_branch</span><span class="pi">:</span> <span class="s">main</span>
+<span class="na">base_commit</span><span class="pi">:</span> <span class="s">&lt;fixed merge-base or branch commit&gt;</span>
+<span class="na">review_started</span><span class="pi">:</span> <span class="kc">false</span>
+<span class="na">agent_teams</span><span class="pi">:</span> <span class="kc">false</span>
+<span class="na">privacy_mode</span><span class="pi">:</span> <span class="kc">false</span>
+<span class="na">bitlesson_required</span><span class="pi">:</span> <span class="kc">false</span>
+<span class="na">mainline_stall_count</span><span class="pi">:</span> <span class="m">0</span>
+<span class="na">last_mainline_verdict</span><span class="pi">:</span> <span class="s">unknown</span>
+<span class="na">drift_status</span><span class="pi">:</span> <span class="s">normal</span>
+</code></pre></div></div> <p>The state file is the loop’s source of truth. It lets the stop hook know which round is active, whether review phase has started, which base commit should be used for final diff review, and whether the loop is drifting.</p> <h3 id="goal-tracker-immutable-goal-mutable-board">Goal Tracker: Immutable Goal, Mutable Board</h3> <p>Humanize’s goal tracker separates the part that should not drift from the part that must evolve as the agent learns.</p> <div class="language-markdown highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="gh"># Goal Tracker</span>
+
+<span class="gu">## IMMUTABLE SECTION</span>
+
+<span class="gu">### Ultimate Goal</span>
+<span class="nt">&lt;copied</span> <span class="na">or</span> <span class="na">extracted</span> <span class="na">from</span> <span class="na">plan</span><span class="nt">&gt;</span>
+
+<span class="gu">### Acceptance Criteria</span>
+<span class="p">-</span> AC-1: <span class="nt">&lt;observable</span> <span class="na">condition</span><span class="nt">&gt;</span>
+<span class="p">-</span> AC-2: <span class="nt">&lt;observable</span> <span class="na">condition</span><span class="nt">&gt;</span>
+<span class="p">
+---
+</span>
+<span class="gu">## MUTABLE SECTION</span>
+
+<span class="gu">### Plan Evolution Log</span>
+| Round | Change | Reason | Impact on AC |
+
+<span class="gu">### Active Tasks</span>
+| Task | Target AC | Status | Tag | Owner | Notes |
+
+<span class="gu">### Blocking Side Issues</span>
+| Issue | Discovered Round | Blocking AC | Resolution Path |
+
+<span class="gu">### Queued Side Issues</span>
+| Issue | Discovered Round | Why Not Blocking | Revisit Trigger |
+
+<span class="gu">### Completed and Verified</span>
+| AC | Task | Completed Round | Verified Round | Evidence |
+
+<span class="gu">### Explicitly Deferred</span>
+| Task | Original AC | Deferred Since | Justification |
+</code></pre></div></div> <p>This is one of the most important Humanize ideas. It prevents local findings from silently replacing the original plan. New issues are not ignored, but they must be classified:</p> <ul> <li> <code class="language-plaintext highlighter-rouge">mainline</code>: plan-derived work that directly advances the current objective.</li> <li> <code class="language-plaintext highlighter-rouge">blocking</code>: side issue that prevents current mainline success.</li> <li> <code class="language-plaintext highlighter-rouge">queued</code>: valid follow-up that must not take over the round.</li> </ul> <h3 id="round-contract-one-round-one-mainline-objective">Round Contract: One Round, One Mainline Objective</h3> <p>Each round must write a round contract before coding:</p> <div class="language-markdown highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="gh"># Round N Contract</span>
+<span class="p">
+-</span> Mainline Objective: <span class="nt">&lt;one</span> <span class="na">objective</span> <span class="na">for</span> <span class="na">this</span> <span class="na">round</span><span class="nt">&gt;</span>
+<span class="p">-</span> Target ACs: <span class="nt">&lt;acceptance</span> <span class="na">criteria</span> <span class="na">this</span> <span class="na">round</span> <span class="na">advances</span><span class="nt">&gt;</span>
+<span class="p">-</span> Blocking Side Issues In Scope: <span class="nt">&lt;must</span> <span class="na">fix</span> <span class="na">now</span><span class="nt">&gt;</span>
+<span class="p">-</span> Queued Side Issues Out of Scope: <span class="nt">&lt;valid</span> <span class="na">but</span> <span class="na">not</span> <span class="na">steering</span><span class="nt">&gt;</span>
+<span class="p">-</span> Success Criteria: <span class="nt">&lt;evidence</span> <span class="na">needed</span> <span class="na">before</span> <span class="na">stop</span><span class="nt">&gt;</span>
+</code></pre></div></div> <p>This contract is the local steering wheel. Review findings can be severe, but they do not automatically become the new project. The next round must decide which findings are truly blocking the mainline objective.</p> <h3 id="summary-interface-what-crosses-the-inner-review-boundary">Summary Interface: What Crosses The Inner Review Boundary</h3> <p>The builder writes a round summary:</p> <div class="language-markdown highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="gu">## What Was Implemented</span>
+<span class="p">-</span> AC-1: done, evidence: <span class="nt">&lt;test</span> <span class="na">or</span> <span class="na">artifact</span><span class="nt">&gt;</span>
+
+<span class="gu">## Files Changed</span>
+<span class="p">-</span> <span class="nt">&lt;path&gt;</span>: <span class="nt">&lt;why</span> <span class="na">it</span> <span class="na">changed</span><span class="nt">&gt;</span>
+
+<span class="gu">## Validation</span>
+<span class="p">-</span> <span class="nt">&lt;command&gt;</span>: pass/fail/not run, reason
+
+<span class="gu">## Remaining Items</span>
+<span class="p">-</span> [mainline] <span class="nt">&lt;still</span> <span class="na">required</span><span class="nt">&gt;</span>
+<span class="p">-</span> [queued] <span class="nt">&lt;follow-up</span><span class="err">,</span> <span class="na">not</span> <span class="na">blocking</span><span class="nt">&gt;</span>
+
+<span class="gu">## BitLesson Delta</span>
+<span class="p">-</span> Action: none|add|update
+<span class="p">-</span> Lesson ID(s): <span class="nt">&lt;IDs</span> <span class="na">or</span> <span class="na">NONE</span><span class="nt">&gt;</span>
+<span class="p">-</span> Notes: <span class="nt">&lt;what</span> <span class="na">changed</span> <span class="na">and</span> <span class="na">why</span><span class="nt">&gt;</span>
+</code></pre></div></div> <p>The summary is not trusted blindly. It is just the packet that crosses the inner review boundary. The hook checks that it exists. Codex reviews it against the plan, goal tracker, and recent history.</p> <h3 id="stop-hook-cheap-gates-before-model-judgement">Stop Hook: Cheap Gates Before Model Judgement</h3> <p>The stop hook is the loop’s judge of whether the builder is allowed to exit the current round.</p> <p>Simplified:</p> <div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>on_stop:
+  parse state.md
+  reject malformed state
+  block branch switch
+  block plan mutation during implementation
+  block incomplete mainline or blocking tasks
+  block missing summary
+  block missing round contract
+  block uninitialized goal tracker
+  block invalid BitLesson Delta
+  block max-iteration overflow
+  then call Codex summary review
+</code></pre></div></div> <p>This is the cheap critique layer. Deterministic checks remove mechanical uncertainty before an expensive model reviewer spends judgement.</p> <h3 id="codex-summary-review-mainline-verdict">Codex Summary Review: Mainline Verdict</h3> <p>The implementation reviewer must classify findings into lanes and provide a mainline progress verdict:</p> <div class="language-markdown highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="gu">### Mainline Gaps</span>
+<span class="p">-</span> <span class="nt">&lt;plan-derived</span> <span class="na">work</span> <span class="na">or</span> <span class="na">AC</span> <span class="na">progress</span> <span class="na">missing</span><span class="nt">&gt;</span>
+
+<span class="gu">### Blocking Side Issues</span>
+<span class="p">-</span> <span class="nt">&lt;bug</span> <span class="na">that</span> <span class="na">blocks</span> <span class="na">current</span> <span class="na">mainline</span> <span class="na">objective</span><span class="nt">&gt;</span>
+
+<span class="gu">### Queued Side Issues</span>
+<span class="p">-</span> <span class="nt">&lt;valid</span> <span class="na">follow-up</span> <span class="na">that</span> <span class="na">should</span> <span class="na">not</span> <span class="na">take</span> <span class="na">over</span><span class="nt">&gt;</span>
+
+Mainline Progress Verdict: ADVANCED / STALLED / REGRESSED
+
+<span class="nt">&lt;terminal</span> <span class="na">line</span><span class="nt">&gt;</span>
+COMPLETE
+or
+STOP
+or
+<span class="nt">&lt;findings</span> <span class="na">to</span> <span class="na">fix</span><span class="nt">&gt;</span>
+</code></pre></div></div> <p>The <code class="language-plaintext highlighter-rouge">Mainline Progress Verdict</code> is crucial. A round can fix real bugs and still fail to advance the plan. Humanize tracks that difference.</p> <h3 id="drift-recovery">Drift Recovery</h3> <p>If Codex says the mainline stalled or regressed, the hook increments a drift counter:</p> <div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>if verdict == ADVANCED:
+  mainline_stall_count = 0
+
+if verdict in {STALLED, REGRESSED}:
+  mainline_stall_count += 1
+
+if mainline_stall_count == 2:
+  require drift recovery prompt
+
+if mainline_stall_count &gt;= 3:
+  stop with circuit breaker
+</code></pre></div></div> <p>The drift recovery prompt asks the builder to re-read the original plan, update the goal tracker, and write a recovered round contract with exactly one mainline objective.</p> <p>This is how Humanize prevents a side quest from becoming the project.</p> <h3 id="final-diff-review">Final Diff Review</h3> <p>When summary review says <code class="language-plaintext highlighter-rouge">COMPLETE</code>, Humanize does not finish immediately.</p> <p>It moves into review phase:</p> <div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>review_base = base_commit captured at setup
+result = codex review --base review_base
+
+if priority findings exist:
+  create review-fix prompt
+  keep original plan stable
+else:
+  enter finalize and methodology analysis
+</code></pre></div></div> <p>The fixed base commit matters. Without it, the comparison target can move while the loop runs, making review ambiguous.</p> <h3 id="bitlesson-memory-with-selection-and-delta-validation">BitLesson: Memory With Selection And Delta Validation</h3> <p>BitLesson is Humanize’s memory discipline.</p> <p>Before a task, a selector reads the task, related paths, and the current BitLesson file:</p> <div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>selector input:
+  sub-task description
+  related file paths
+  current .humanize/bitlesson.md
+
+selector output:
+  LESSON_IDS: &lt;comma-separated IDs or NONE&gt;
+  RATIONALE: &lt;one concise sentence&gt;
+</code></pre></div></div> <p>After the round, the summary must include <code class="language-plaintext highlighter-rouge">## BitLesson Delta</code>:</p> <div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Action: none|add|update
+Lesson ID(s): &lt;IDs or NONE&gt;
+Notes: &lt;what changed and why&gt;
+</code></pre></div></div> <p>The delta validator checks:</p> <ul> <li>The section exists.</li> <li>The action is one of <code class="language-plaintext highlighter-rouge">none</code>, <code class="language-plaintext highlighter-rouge">add</code>, <code class="language-plaintext highlighter-rouge">update</code>.</li> <li> <code class="language-plaintext highlighter-rouge">none</code> has no concrete IDs.</li> <li> <code class="language-plaintext highlighter-rouge">add</code> or <code class="language-plaintext highlighter-rouge">update</code> has concrete IDs.</li> <li>IDs use the expected format.</li> <li>IDs exist in the BitLesson file when claimed.</li> <li>Notes are present and not placeholder text.</li> </ul> <p>The lesson is that memory should be selected and accountable. The agent should not silently ignore reusable knowledge, and it should not silently claim it updated knowledge without evidence.</p> <h3 id="methodology-analysis-the-harness-critiques-itself">Methodology Analysis: The Harness Critiques Itself</h3> <p>After successful completion, Humanize can enter methodology analysis:</p> <div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>enter_methodology_analysis(exit_reason):
+  if privacy mode:
+    skip
+  rename state.md -&gt; methodology-analysis-state.md
+  write .methodology-exit-reason
+  ask analysis agent to inspect round summaries and review results
+  require methodology-analysis-report.md
+  require methodology-analysis-done.md
+  optionally ask human to file sanitized issue
+  rename methodology-analysis-state.md -&gt; complete/stop/maxiter-state.md
+</code></pre></div></div> <p>This turns run traces into method improvement. The analysis is supposed to criticize the harness, not the project.</p> <h3 id="humanize-h1-mechanism-deck">Humanize h1 Mechanism Deck</h3> <section class="hcards" aria-label="Humanize h1 mechanism deck"> <div class="hcards__title">Humanize h1 mechanism deck</div> <div class="hcards__rail" tabindex="0"> <article id="h1-01" class="hcard"> <h4 class="hcard__title">Plan pre-check and quiz</h4> <div class="hcard__body"> <p>Start from a plan, not raw intent. Check repository relevance and branch-safety first. Then optionally quiz the human on the plan to catch delegated work the human did not understand.</p> </div> </article> <article id="h1-02" class="hcard"> <h4 class="hcard__title">Inspectable loop state</h4> <div class="hcard__body"> <p>Write round number, budget, model config, base commit, review phase, privacy mode, BitLesson mode, and drift counters into a state file. Hooks read state from disk instead of trusting chat memory.</p> </div> </article> <article id="h1-03" class="hcard"> <h4 class="hcard__title">Goal tracker</h4> <div class="hcard__body"> <p>Split immutable goal and acceptance criteria from mutable task state. This creates a stable plan anchor while still allowing the board to evolve with findings.</p> </div> </article> <article id="h1-04" class="hcard"> <h4 class="hcard__title">Round contract</h4> <div class="hcard__body"> <p>Require one mainline objective per round. Classify side issues as blocking or queued so reviewer findings cannot silently become the new project.</p> </div> </article> <article id="h1-05" class="hcard"> <h4 class="hcard__title">Summary packet</h4> <div class="hcard__body"> <p>Make the builder write what changed, why it changed, how it was validated, and what remains. The reviewer judges this packet against the plan and tracker.</p> </div> </article> <article id="h1-06" class="hcard"> <h4 class="hcard__title">Cheap stop gates</h4> <div class="hcard__body"> <p>Before model review, block missing summaries, missing contracts, invalid memory deltas, uninitialized trackers, branch switches, and max-iteration overflow.</p> </div> </article> <article id="h1-07" class="hcard"> <h4 class="hcard__title">Mainline verdict</h4> <div class="hcard__body"> <p>Require the reviewer to say whether the original plan advanced, stalled, or regressed. Local bug fixing is not automatically plan progress.</p> </div> </article> <article id="h1-08" class="hcard"> <h4 class="hcard__title">Drift recovery</h4> <div class="hcard__body"> <p>After repeated stalled or regressed rounds, force a recovery contract. After more repeated drift, stop instead of letting the loop consume unbounded work.</p> </div> </article> <article id="h1-09" class="hcard"> <h4 class="hcard__title">Diff review</h4> <div class="hcard__body"> <p>After summary review says complete, run a final patch review against the fixed base commit. Plan completion and patch correctness are separate questions.</p> </div> </article> <article id="h1-10" class="hcard"> <h4 class="hcard__title">Methodology analysis</h4> <div class="hcard__body"> <p>At the end, inspect the loop records from a method-improvement perspective. The harness becomes an object that can be criticized and improved.</p> </div> </article> </div> </section> <h3 id="humanize-setup-parameters">Humanize Setup Parameters</h3> <p>Humanize exposes several decisions that matter to reproduction:</p> <table> <thead> <tr> <th>Parameter</th> <th>Meaning</th> </tr> </thead> <tbody> <tr> <td><code class="language-plaintext highlighter-rouge">--max</code></td> <td>Maximum implementation rounds before termination.</td> </tr> <tr> <td><code class="language-plaintext highlighter-rouge">--codex-model MODEL:EFFORT</code></td> <td>Reviewer model and reasoning effort.</td> </tr> <tr> <td><code class="language-plaintext highlighter-rouge">--codex-timeout</code></td> <td>Review command timeout.</td> </tr> <tr> <td><code class="language-plaintext highlighter-rouge">--full-review-round</code></td> <td>Cadence for deeper full-alignment review.</td> </tr> <tr> <td> <code class="language-plaintext highlighter-rouge">--base-branch</code> and captured <code class="language-plaintext highlighter-rouge">base_commit</code> </td> <td>Stable diff-review target.</td> </tr> <tr> <td><code class="language-plaintext highlighter-rouge">--track-plan-file</code></td> <td>Blocks silent mutation of the source plan.</td> </tr> <tr> <td> <code class="language-plaintext highlighter-rouge">--skip-quiz</code>, <code class="language-plaintext highlighter-rouge">--yolo</code> </td> <td>Human can waive advisory plan-friction.</td> </tr> <tr> <td><code class="language-plaintext highlighter-rouge">--agent-teams</code></td> <td>Optional thin parallelism wrapper.</td> </tr> <tr> <td>BitLesson strictness</td> <td>Controls whether empty memory can keep reporting no lesson.</td> </tr> <tr> <td><code class="language-plaintext highlighter-rouge">--privacy</code></td> <td>Skips methodology-sharing path.</td> </tr> </tbody> </table> <p>These parameters are not merely CLI details. They are the knobs that decide how strict, autonomous, private, and expensive the harness is.</p> <h2 id="case-study-2-codex-review-and-goals">Case Study 2: Codex Review And Goals</h2> <p>Codex offers two mechanisms that are narrower than Humanize but architecturally clean.</p> <ol> <li> <strong>Review</strong> is a bounded service: choose a target, run a narrowed reviewer, parse output, record lifecycle events, exit.</li> <li> <strong>Goal</strong> is a persistent contract: store an objective, track lifecycle and usage, continue only at safe boundaries, and restrict what status changes the model may make.</li> </ol> <p>The lesson is that not every harness feature should be modeled as a workflow graph. Review is naturally a service. Goal is naturally persisted state plus runtime policy.</p> <h3 id="codex-review-reproduction-model">Codex Review: Reproduction Model</h3> <p>To reproduce Codex review, implement:</p> <table> <thead> <tr> <th>Object</th> <th>Purpose</th> </tr> </thead> <tbody> <tr> <td>Review target</td> <td>Defines what evidence the reviewer inspects.</td> </tr> <tr> <td>Review request</td> <td>Converts target into a prompt and diff context.</td> </tr> <tr> <td>Narrow reviewer config</td> <td>Disables builder-like powers.</td> </tr> <tr> <td>Review output parser</td> <td>Parses typed findings, falls back to text.</td> </tr> <tr> <td>Lifecycle events</td> <td>Entered review, exited review, assistant message.</td> </tr> <tr> <td>Inline/detached delivery</td> <td>Run review in parent thread or forked thread.</td> </tr> </tbody> </table> <p>The review prompt makes the role narrow:</p> <div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>You are reviewing changes for bugs.
+Report only findings the author would fix.
+Prioritize correctness, regressions, security, data loss, and spec violations.
+
+Output JSON:
+  findings: [
+    title,
+    body,
+    confidence_score,
+    priority,
+    code_location
+  ]
+  overall_correctness
+  overall_explanation
+  overall_confidence_score
+</code></pre></div></div> <p>The target contract is explicit:</p> <div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>ReviewTarget:
+  uncommittedChanges
+  baseBranch(branch)
+  commit(sha, optional_title)
+  custom(instructions)
+
+Validation:
+  branch cannot be empty
+  commit sha cannot be empty
+  custom instructions cannot be empty
+</code></pre></div></div> <p>Base-branch review tries to compute a merge base and review the diff from that base. If a merge base is unavailable, it falls back to a branch-diff prompt.</p> <h3 id="codex-review-narrowed-sub-agent">Codex Review: Narrowed Sub-Agent</h3> <p>Review runs as a one-shot sub-agent with reduced authority:</p> <div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>start_review_conversation(request):
+  sub_config = copy(parent_config)
+  sub_config.web_search = disabled
+  sub_config.spawn = disabled
+  sub_config.collaboration = disabled
+  sub_config.multi_agent = disabled
+  sub_config.approval_policy = never
+  sub_config.model = review_model if configured else current_model
+  sub_config.base_instructions = REVIEW_PROMPT
+
+  run_one_shot_sub_agent(source = Review, prompt = request)
+</code></pre></div></div> <p>This is important. The reviewer is not a normal implementation agent wearing a different prompt. The configuration narrows what it can do.</p> <h3 id="codex-review-output-handling">Codex Review: Output Handling</h3> <p>Codex tries to preserve structure without failing the whole review when the model misses the schema:</p> <div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>process_review_events:
+  suppress streaming assistant deltas
+  wait for final assistant message
+  parse JSON review output
+  else parse first JSON object found in text
+  else treat text as overall_explanation
+
+exit_review_mode:
+  record user_action message containing review output
+  emit ExitedReviewMode event
+  record assistant message with human-readable review
+  materialize rollout
+</code></pre></div></div> <p>The fallback is pragmatic. It preserves review text, but the trace should know whether the output was structured JSON or plain text. Those are different evidence quality levels.</p> <h3 id="codex-review-inline-and-detached-delivery">Codex Review: Inline And Detached Delivery</h3> <p>The API supports two delivery modes:</p> <div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>review/start(thread_id, target, delivery = inline):
+  validate target
+  build display text and ReviewRequest
+
+  if delivery == inline:
+    submit Op::Review to existing thread
+    review_thread_id = thread_id
+
+  if delivery == detached:
+    materialize parent rollout
+    load parent history
+    fork new review thread
+    optionally override model with review_model
+    submit Op::Review to child thread
+    review_thread_id = child_thread_id
+</code></pre></div></div> <p>Inline review shares the parent thread. Detached review isolates the reviewer in a fork. That is a clean pattern for any harness: some checks should be part of the main conversation, while others should run in a separate review lane.</p> <h3 id="codex-goal-reproduction-model">Codex Goal: Reproduction Model</h3> <p>A Codex goal is thread-scoped durable state:</p> <div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span><span class="w">
+  </span><span class="nl">"threadId"</span><span class="p">:</span><span class="w"> </span><span class="s2">"thr_123"</span><span class="p">,</span><span class="w">
+  </span><span class="nl">"objective"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Reduce p95 latency below 120ms while tests stay green"</span><span class="p">,</span><span class="w">
+  </span><span class="nl">"status"</span><span class="p">:</span><span class="w"> </span><span class="s2">"active"</span><span class="p">,</span><span class="w">
+  </span><span class="nl">"tokenBudget"</span><span class="p">:</span><span class="w"> </span><span class="mi">200000</span><span class="p">,</span><span class="w">
+  </span><span class="nl">"tokensUsed"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w">
+  </span><span class="nl">"timeUsedSeconds"</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w">
+  </span><span class="nl">"createdAt"</span><span class="p">:</span><span class="w"> </span><span class="mi">1776272400</span><span class="p">,</span><span class="w">
+  </span><span class="nl">"updatedAt"</span><span class="p">:</span><span class="w"> </span><span class="mi">1776272400</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre></div></div> <p>External clients can manage it:</p> <div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>thread/goal/set:
+  create or update current goal
+  may set objective, status, token budget
+  emits thread/goal/updated
+
+thread/goal/get:
+  return current goal or null
+
+thread/goal/clear:
+  delete current goal
+  emit thread/goal/cleared when state changes
+</code></pre></div></div> <p>The model sees a narrower tool surface:</p> <div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>get_goal():
+  read objective, status, budget, token usage, time usage
+
+create_goal(objective, token_budget?):
+  only when explicitly requested
+  fails if a goal already exists
+
+update_goal(status):
+  status must be complete or blocked
+  cannot pause, resume, budget-limit, or usage-limit
+</code></pre></div></div> <p>This separates authority:</p> <div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>model:
+  complete
+  blocked
+
+user/API:
+  set
+  pause
+  resume
+  clear
+
+system/runtime:
+  budget_limited
+  usage_limited
+  accounting
+  continuation
+</code></pre></div></div> <h3 id="goal-authoring-what-the-cookbook-adds">Goal Authoring: What The Cookbook Adds</h3> <p>The Codex source explains goal state and runtime. The OpenAI Cookbook explains how a human should write a goal that is worth running.</p> <p>A normal prompt says:</p> <div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>do this next thing
+</code></pre></div></div> <p>A goal says:</p> <div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>keep working until this outcome is true
+</code></pre></div></div> <p>Strong goals usually include:</p> <div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>outcome:
+  what should be true when done
+
+verification surface:
+  test, benchmark, report, command output, artifact, or source material
+
+constraints:
+  what must not regress
+
+boundaries:
+  files, tools, data, repositories, or resources Codex may use
+
+iteration policy:
+  how to choose the next attempt after each result
+
+blocked stop condition:
+  when no defensible path remains and what input would unlock progress
+</code></pre></div></div> <p>Example:</p> <div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Weak:
+  /goal Improve performance
+
+Strong:
+  /goal Reduce p95 checkout latency below 120 ms on the checkout benchmark
+        while keeping the correctness test suite green.
+</code></pre></div></div> <p>The stronger version gives Codex an outcome, evidence surface, and constraint. If latency improves from 180 ms to 135 ms, the goal is not done. If latency drops below 120 ms but correctness tests fail, the goal is not done.</p> <p>The Cookbook’s research example is even more important. “Reproduce the paper” is too vague. A stronger research goal asks for:</p> <div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>claim inventory
+evidence mapping
+feasible local reproductions
+approximate support where exact replay is impossible
+blocked claims
+remaining uncertainty
+final report that preserves those distinctions
+</code></pre></div></div> <p>This is the right pattern for agentic research and optimization. The agent can continue through ambiguity without flattening uncertainty into a false success.</p> <h3 id="codex-goal-continuation">Codex Goal Continuation</h3> <p>When a goal remains active, Codex injects a continuation prompt:</p> <div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Continue working toward the active thread goal.
+
+The objective persists across turns.
+Do not shrink it to what fits now.
+Make concrete progress toward the real requested end state.
+
+Before marking complete:
+  derive concrete requirements
+  inspect current evidence
+  verify every requirement
+  do not mark complete from partial progress
+
+Before marking blocked:
+  do not stop on first blocker
+  same blocker must recur across multiple goal turns
+  blocked means no meaningful progress is possible
+</code></pre></div></div> <p>The goal is not higher-priority instruction. It is user-provided state that the runtime keeps visible and bounded.</p> <h3 id="budget-and-objective-updates">Budget And Objective Updates</h3> <p>When token budget is exhausted, runtime owns the transition:</p> <div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>status = budget_limited
+inject budget-limit prompt
+tell agent:
+  stop new substantive work
+  summarize progress
+  list remaining work
+  do not call update_goal unless actually complete
+</code></pre></div></div> <p>When the user edits the objective while a turn is running:</p> <div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>external objective update:
+  account current progress
+  update state DB
+  emit ordered notification
+  inject objective-updated prompt
+  tell agent new objective supersedes old objective
+</code></pre></div></div> <p>This prevents the agent from acting on stale goal state.</p> <h3 id="goal-runtime-event-switch">Goal Runtime Event Switch</h3> <p>The runtime is event-driven:</p> <div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>TurnStarted:
+  capture active goal id
+  capture token/time baseline
+
+ToolCompleted:
+  account usage
+  maybe inject budget steering
+
+ToolCompletedGoal:
+  account usage before goal update
+
+TurnFinished:
+  account final usage
+  clear continuation reservation
+
+UsageLimitReached:
+  mark active goal usage_limited
+
+ExternalSet:
+  account before mutation
+  update runtime state
+  maybe inject objective-updated steering
+
+ExternalClear:
+  clear runtime state
+
+ThreadResumed:
+  restore active-goal accounting if status is active
+
+MaybeContinueIfIdle:
+  start continuation if active, idle, and no queued input
+</code></pre></div></div> <p>This is why goals are not just workflow steps. They are state observed by runtime policy.</p> <h3 id="codex-mechanism-deck">Codex Mechanism Deck</h3> <section class="hcards" aria-label="Codex review and goal mechanism deck"> <div class="hcards__title">Codex review and goal mechanism deck</div> <div class="hcards__rail" tabindex="0"> <article id="codex-01" class="hcard"> <h4 class="hcard__title">Review target contract</h4> <div class="hcard__body"> <p>Review starts from a typed target: uncommitted changes, base branch, commit, or custom instructions. Empty targets are rejected before the reviewer runs.</p> </div> </article> <article id="codex-02" class="hcard"> <h4 class="hcard__title">Narrow reviewer service</h4> <div class="hcard__body"> <p>The reviewer is a one-shot sub-agent with web search, spawning, collaboration, and approval prompts disabled. It reviews; it does not build.</p> </div> </article> <article id="codex-03" class="hcard"> <h4 class="hcard__title">Structured output with fallback</h4> <div class="hcard__body"> <p>Codex parses JSON findings when possible, then tries a JSON substring, then falls back to plain text. The trace should preserve the parse quality.</p> </div> </article> <article id="codex-04" class="hcard"> <h4 class="hcard__title">Inline vs detached review</h4> <div class="hcard__body"> <p>Inline review writes into the parent thread. Detached review materializes history and forks a separate review thread for isolation.</p> </div> </article> <article id="codex-05" class="hcard"> <h4 class="hcard__title">Goal as durable state</h4> <div class="hcard__body"> <p>A goal is a persisted thread object with objective, status, budget, usage, and timestamps. It is not just text in the current prompt.</p> </div> </article> <article id="codex-06" class="hcard"> <h4 class="hcard__title">Caller-specific permissions</h4> <div class="hcard__body"> <p>The model can mark complete or blocked. User/API controls set, pause, resume, and clear. Runtime controls budget and usage statuses.</p> </div> </article> <article id="codex-07" class="hcard"> <h4 class="hcard__title">Goal authoring fields</h4> <div class="hcard__body"> <p>Strong goals name outcome, evidence, constraints, boundaries, iteration policy, and blocked stop condition. This is the user-facing half of the contract.</p> </div> </article> <article id="codex-08" class="hcard"> <h4 class="hcard__title">Completion audit</h4> <div class="hcard__body"> <p>Continuation prompts require requirement-by-requirement verification before <code class="language-plaintext highlighter-rouge">complete</code>. Improvement or plausible intent is not enough.</p> </div> </article> <article id="codex-09" class="hcard"> <h4 class="hcard__title">Idle continuation</h4> <div class="hcard__body"> <p>Continuation starts only when goals are enabled, the thread is idle, no input is queued, the mode allows it, and the goal is still active.</p> </div> </article> <article id="codex-10" class="hcard"> <h4 class="hcard__title">External mutation steering</h4> <div class="hcard__body"> <p>If the user edits the objective mid-run, runtime updates state and injects a prompt telling the agent the new objective supersedes the old one.</p> </div> </article> </div> </section> <h3 id="codex-goal-setup-decisions">Codex Goal Setup Decisions</h3> <table> <thead> <tr> <th>Decision</th> <th>Effect</th> </tr> </thead> <tbody> <tr> <td>Materialized thread required</td> <td>Goals need durable state DB storage.</td> </tr> <tr> <td>Objective text</td> <td>Human-facing canonical target, but weak without evidence semantics.</td> </tr> <tr> <td>Token budget</td> <td>Bounds autonomous continuation.</td> </tr> <tr> <td>Model tool restrictions</td> <td>Prevents model from owning pause, resume, budget, and usage states.</td> </tr> <tr> <td>Completion audit prompt</td> <td>Prevents shrinking the goal to local progress.</td> </tr> <tr> <td>Blocked recurrence</td> <td>Prevents premature “blocked” labels.</td> </tr> <tr> <td>Idle continuation guard</td> <td>Prevents background work when thread is active or user input is queued.</td> </tr> <tr> <td>External mutation handling</td> <td>Keeps active turns aligned with changed objectives.</td> </tr> <tr> <td><code class="language-plaintext highlighter-rouge">/goal pause/resume/clear</code></td> <td>Gives user lifecycle control.</td> </tr> </tbody> </table> <h2 id="comparing-the-two-harness-shapes">Comparing The Two Harness Shapes</h2> <p>Humanize and Codex solve overlapping problems with different shapes.</p> <table> <thead> <tr> <th>Concern</th> <th>Humanize h1</th> <th>Codex Review</th> <th>Codex Goals</th> </tr> </thead> <tbody> <tr> <td>Main abstraction</td> <td>Workflow loop</td> <td>Bounded service</td> <td>Persistent contract plus runtime policy</td> </tr> <tr> <td>Objective</td> <td>Plan and goal tracker</td> <td>Review target only</td> <td>Thread goal objective</td> </tr> <tr> <td>Evidence</td> <td>Summary, tests, tracker, diff, BitLesson</td> <td>Diff or custom target</td> <td>User-defined evidence in objective</td> </tr> <tr> <td>Stop control</td> <td>Stop hook blocks exit</td> <td>One-shot service exits</td> <td>Runtime continuation and goal status</td> </tr> <tr> <td>Review</td> <td>Codex summary review and diff review</td> <td>Review service itself</td> <td>Optional; not built into goal</td> </tr> <tr> <td>Drift handling</td> <td>Mainline verdict and drift recovery</td> <td>Not applicable</td> <td>Completion and blocked audits</td> </tr> <tr> <td>Memory</td> <td>BitLesson selector and delta</td> <td>Conversation review artifact</td> <td>Persisted goal state and usage</td> </tr> <tr> <td>Self-improvement</td> <td>Methodology analysis</td> <td>Trace only</td> <td>Goal trace and accounting</td> </tr> </tbody> </table> <p>Humanize is heavier but demonstrates a full long-task development loop. Codex is smaller but cleaner in separating service, contract, and runtime policy.</p> <h2 id="what-is-missing-in-these-harnesses">What Is Missing In These Harnesses?</h2> <p>Both systems are useful, but both leave gaps for project-wide strategy evolution.</p> <h3 id="1-objective-semantics-are-still-too-textual">1. Objective Semantics Are Still Too Textual</h3> <p>Humanize has a plan and goal tracker. Codex has a goal string plus runtime state. The Cookbook shows how to write strong goal prose.</p> <p>But prose is not enough for project evolution.</p> <p>A target project often needs objective services such as:</p> <div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>acceptance_criteria()
+evidence_requirements()
+allowed_artifacts()
+benchmark_budget()
+correctness_oracle()
+domain_constraints()
+blocked_evidence_threshold()
+</code></pre></div></div> <p>Those should be programmable. For example, a kernel-evolution target should not rely on a prompt sentence to explain numerical tolerance, benchmark commands, GPU constraints, and allowed files.</p> <h3 id="2-evidence-needs-types-and-grades">2. Evidence Needs Types And Grades</h3> <p>Humanize has summaries and reviews. Codex goals ask for evidence. The research example shows that evidence can be exact, approximate, proxy, blocked, or unknown.</p> <p>Most harnesses still flatten this too much.</p> <p>For strategy evolution, evidence should be typed:</p> <div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Exact:
+  deterministic test, verified reproduction, exact metric threshold
+
+Approximate:
+  trained replacement, close numerical match, statistical support
+
+Proxy:
+  benchmark related to production but not identical
+
+Blocked:
+  missing data, unavailable hardware, missing upstream artifact
+
+Unknown:
+  not checked yet, inconclusive, contradictory runs
+</code></pre></div></div> <p>Without typed evidence, an agent can overclaim success.</p> <h3 id="3-workflow-is-too-often-the-root-object">3. Workflow Is Too Often The Root Object</h3> <p>Humanize looks workflow-centric because the user runs one loop. Codex goals look less workflow-centric because continuation is runtime policy over state.</p> <p>For a general framework, workflow should not own everything.</p> <p>A better decomposition is:</p> <div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Service:
+  bounded request/response, such as review(target)
+
+Contract:
+  durable state and allowed operations, such as objective or target
+
+Policy:
+  event-driven behavior over contracts and services, such as continuation
+
+Trace:
+  request, response, evidence, status change, degraded output, reviewer finding
+</code></pre></div></div> <p>Workflow can be a policy. It should not be the only way to express the system.</p> <h3 id="4-harness-evolution-is-not-first-class-enough">4. Harness Evolution Is Not First-Class Enough</h3> <p>Humanize methodology analysis is a strong idea: the run should critique the method, not only the project. Codex traces lifecycle and usage events.</p> <p>But a general harness should make the harness itself inspectable:</p> <div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Which service calls happened?
+Which gates blocked work?
+Which evidence was missing?
+Which prompts caused drift?
+Which review findings repeated?
+Which contract fields were too weak?
+Which policies launched wasteful work?
+</code></pre></div></div> <p>Those traces should become inputs for improving the harness.</p> <h3 id="5-the-user-interface-for-harness-power-is-still-hard">5. The User Interface For Harness Power Is Still Hard</h3> <p>Codex’s <code class="language-plaintext highlighter-rouge">/goal</code> command is easy. Humanize’s RLCR is powerful but heavier.</p> <p>A general framework needs progressive disclosure:</p> <div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Level 0:
+  one prompt or one workflow
+
+Level 1:
+  add a goal/objective contract
+
+Level 2:
+  add evidence services and review gates
+
+Level 3:
+  add memory, drift recovery, and methodology analysis
+
+Level 4:
+  let agents inspect traces and improve the harness itself
+</code></pre></div></div> <p>Users should not pay setup cost for features they do not need.</p> <h2 id="what-this-suggests-for-puppeteer">What This Suggests For Puppeteer</h2> <p>The case studies suggest Puppeteer’s position:</p> <blockquote> <p>Puppeteer should be an outside project-improvement harness that lets a target project expose programmable contracts and services to one or more agents, while the harness mediates communication, evidence, gates, policies, and traces.</p> </blockquote> <p>This is not the same as replacing Humanize or Codex.</p> <p>Humanize is a workflow-rich harness. Codex goals are a clean thread-objective mechanism. Puppeteer should learn from both while targeting a broader use case: strategy evolution inside arbitrary projects.</p> <h3 id="puppeteers-missing-layer">Puppeteer’s Missing Layer</h3> <p>The missing layer is not “more workflow nodes.” It is a communication and contract layer:</p> <div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Harness-mediated request:
+  caller -&gt; contract/service -&gt; response -&gt; trace
+
+Examples:
+  policy -&gt; target.benchmark(candidate) -&gt; BenchmarkResult
+  policy -&gt; objective.check_completion(evidence) -&gt; CompletionDecision
+  policy -&gt; review.review(packet) -&gt; ReviewDecision
+  policy -&gt; memory.select(task, files) -&gt; KnowledgePacket
+</code></pre></div></div> <p>This layer gives several benefits:</p> <ul> <li>Components are only defined when needed.</li> <li>Services can be traced uniformly.</li> <li>Agents can inspect the traces and improve the system.</li> <li>Workflow can stay decoupled from target-specific details.</li> <li>The same project can start simple and add structure over time.</li> </ul> <h3 id="what-puppeteer-should-provide-easily">What Puppeteer Should Provide Easily</h3> <p>The case studies point to a concrete product surface.</p> <p>Puppeteer should make these easy:</p> <ol> <li>Define an objective contract with optional authoring fields: outcome, evidence, constraints, boundaries, iteration policy, blocked condition.</li> <li>Define target services: run benchmark, check correctness, inspect artifacts, compare candidates, extract strategy scopes.</li> <li>Define review services: summary review, diff review, evidence review, claim-ledger review.</li> <li>Define gates: deterministic checks before model judgement.</li> <li>Define policies: simple workflow, Humanize-like RLCR, Codex-goal-like continuation, or custom target evolution loop.</li> <li>Record traces: every request, response, degraded output, evidence packet, review decision, state transition, and blocked reason.</li> <li>Support progressive disclosure: a user can run a workflow-only harness first, then add contracts and services only when the target needs them.</li> </ol> <h3 id="a-minimal-puppeteer-like-shape">A Minimal Puppeteer-Like Shape</h3> <div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">objective</span> <span class="o">=</span> <span class="n">harness</span><span class="p">.</span><span class="nf">contract</span><span class="p">(</span><span class="sh">"</span><span class="s">objective</span><span class="sh">"</span><span class="p">)</span>
+<span class="n">target</span> <span class="o">=</span> <span class="n">harness</span><span class="p">.</span><span class="nf">contract</span><span class="p">(</span><span class="sh">"</span><span class="s">target</span><span class="sh">"</span><span class="p">)</span>
+<span class="n">review</span> <span class="o">=</span> <span class="n">harness</span><span class="p">.</span><span class="nf">service</span><span class="p">(</span><span class="sh">"</span><span class="s">review</span><span class="sh">"</span><span class="p">)</span>
+
+<span class="nd">@policy.on</span><span class="p">(</span><span class="sh">"</span><span class="s">round</span><span class="sh">"</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">evolve</span><span class="p">(</span><span class="n">ctx</span><span class="p">):</span>
+    <span class="n">candidate</span> <span class="o">=</span> <span class="n">ctx</span><span class="p">.</span><span class="n">agent</span><span class="p">.</span><span class="nf">propose_change</span><span class="p">(</span><span class="n">objective</span><span class="p">.</span><span class="nf">current</span><span class="p">())</span>
+    <span class="n">evidence</span> <span class="o">=</span> <span class="n">target</span><span class="p">.</span><span class="nf">evaluate</span><span class="p">(</span><span class="n">candidate</span><span class="p">)</span>
+    <span class="n">decision</span> <span class="o">=</span> <span class="n">review</span><span class="p">.</span><span class="nf">check</span><span class="p">(</span><span class="n">objective</span><span class="o">=</span><span class="n">objective</span><span class="p">.</span><span class="nf">snapshot</span><span class="p">(),</span> <span class="n">evidence</span><span class="o">=</span><span class="n">evidence</span><span class="p">)</span>
+
+    <span class="n">ctx</span><span class="p">.</span><span class="n">trace</span><span class="p">.</span><span class="nf">record</span><span class="p">(</span><span class="n">candidate</span><span class="o">=</span><span class="n">candidate</span><span class="p">,</span> <span class="n">evidence</span><span class="o">=</span><span class="n">evidence</span><span class="p">,</span> <span class="n">decision</span><span class="o">=</span><span class="n">decision</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">decision</span><span class="p">.</span><span class="n">complete</span><span class="p">:</span>
+        <span class="n">objective</span><span class="p">.</span><span class="nf">update_by_model</span><span class="p">(</span><span class="sh">"</span><span class="s">complete</span><span class="sh">"</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="n">decision</span><span class="p">.</span><span class="n">blocking</span><span class="p">:</span>
+        <span class="n">objective</span><span class="p">.</span><span class="nf">record_blocker</span><span class="p">(</span><span class="n">decision</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">ctx</span><span class="p">.</span><span class="n">agent</span><span class="p">.</span><span class="nf">continue_with</span><span class="p">(</span><span class="n">decision</span><span class="p">.</span><span class="nf">next_prompt</span><span class="p">())</span>
+</code></pre></div></div> <p>This sketch is intentionally not a fixed workflow DSL. It is normal code calling contracts and services through a harness.</p> <h2 id="takeaways">Takeaways</h2> <p>Humanize h1 shows why a long-task coding loop needs plans, round contracts, cheap gates, review pressure, memory discipline, drift recovery, and methodology analysis.</p> <p>Codex review shows how a narrowly scoped review service should work: typed target, reduced tool surface, structured output, fallback, lifecycle events, and optional detached delivery.</p> <p>Codex goals show how a durable objective should work: persisted state, caller-specific permissions, runtime accounting, safe continuation, budget/usage statuses, external mutation handling, and completion audits.</p> <p>The OpenAI Cookbook shows the missing human-facing layer: a goal should encode outcome, evidence, constraints, boundaries, iteration policy, and blocked stop condition.</p> <p>Puppeteer should not simply copy any one of these. Its job is to provide the outside framework where target projects can define their own contracts and services, agents can operate through those interfaces, and the harness can trace and improve the whole process.</p> </div> </article> </div> </div> </div> </div> <footer class="fixed-bottom" role="contentinfo"> <div class="container mt-0"> © Copyright 2026 Youwei Xiao. Powered by <a href="https://jekyllrb.com/" target="_blank" rel="external nofollow noopener">Jekyll</a> with <a href="https://github.com/alshedivat/al-folio" rel="external nofollow noopener" target="_blank">al-folio</a> theme. Hosted by <a href="https://pages.github.com/" target="_blank" rel="external nofollow noopener">GitHub Pages</a>. Last updated: May 26, 2026. </div> </footer> <script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js" integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4=" crossorigin="anonymous"></script> <script src="/assets/js/bootstrap.bundle.min.js"></script> <script src="https://cdn.jsdelivr.net/npm/mdbootstrap@4.20.0/js/mdb.min.js" integrity="sha256-NdbiivsvWt7VYCt6hYNT3h/th9vSTL4EDWeGs5SN3DA=" crossorigin="anonymous"></script> <script defer src="https://cdn.jsdelivr.net/npm/masonry-layout@4.2.2/dist/masonry.pkgd.min.js" integrity="sha256-Nn1q/fx0H7SNLZMQ5Hw5JLaTRZp0yILA/FRexe19VdI=" crossorigin="anonymous"></script> <script defer src="https://cdn.jsdelivr.net/npm/imagesloaded@5.0.0/imagesloaded.pkgd.min.js" integrity="sha256-htrLFfZJ6v5udOG+3kNLINIKh2gvoKqwEhHYfTTMICc=" crossorigin="anonymous"></script> <script defer src="/assets/js/masonry.js" type="text/javascript"></script> <script defer src="https://cdn.jsdelivr.net/npm/mermaid@10.7.0/dist/mermaid.min.js" integrity="sha256-TtLOdUA8mstPoO6sGvHIGx2ceXrrX4KgIItO06XOn8A=" crossorigin="anonymous"></script> <script defer src="https://cdn.jsdelivr.net/npm/d3@7.8.5/dist/d3.min.js" integrity="sha256-1rA678n2xEx7x4cTZ5x4wpUCj6kUMZEZ5cxLSVSFWxw=" crossorigin="anonymous"></script> <script>let mermaidTheme=determineComputedTheme();document.addEventListener("readystatechange",()=>{"complete"===document.readyState&&(document.querySelectorAll("pre>code.language-mermaid").forEach(e=>{const t=e.textContent,d=e.parentElement;d.classList.add("unloaded");let a=document.createElement("pre");a.classList.add("mermaid");const n=document.createTextNode(t);a.appendChild(n),d.after(a)}),mermaid.initialize({theme:mermaidTheme}),"undefined"!=typeof d3&&window.addEventListener("load",function(){d3.selectAll(".mermaid svg").each(function(){var e=d3.select(this);e.html("<g>"+e.html()+"</g>");var t=e.select("g"),d=d3.zoom().on("zoom",function(e){t.attr("transform",e.transform)});e.call(d)})}))});</script> <script defer src="https://cdn.jsdelivr.net/npm/medium-zoom@1.1.0/dist/medium-zoom.min.js" integrity="sha256-ZgMyDAIYDYGxbcpJcfUnYwNevG/xi9OHKaR/8GK+jWc=" crossorigin="anonymous"></script> <script defer src="/assets/js/zoom.js?85ddb88934d28b74e78031fd54cf8308"></script> <script defer src="/assets/js/bootstrap-toc.min.js?c82ff4de8b0955d6ff14f5b05eed7eb6"></script> <script defer src="https://cdn.jsdelivr.net/npm/bootstrap-table@1.22.4/dist/bootstrap-table.min.js" integrity="sha256-4rppopQE9POKfukn2kEvhJ9Um25Cf6+IDVkARD0xh78=" crossorigin="anonymous"></script> <script src="/assets/js/no_defer.js?2781658a0a2b13ed609542042a859126"></script> <script defer src="/assets/js/common.js?e0514a05c5c95ac1a93a8dfd5249b92e"></script> <script defer src="/assets/js/copy_code.js?12775fdf7f95e901d7119054556e495f" type="text/javascript"></script> <script defer src="/assets/js/jupyter_new_tab.js?d9f17b6adc2311cbabd747f4538bb15f"></script> <script async src="https://d1bxh8uas1mnw7.cloudfront.net/assets/embed.js"></script> <script async src="https://badge.dimensions.ai/badge.js"></script> <script type="text/javascript">window.MathJax={tex:{inlineMath:[["$","$"],["\\(","\\)"]],displayMath:[["$$","$$"],["\\[","\\]"]],processEscapes:!0,processEnvironments:!0}};</script> <script type="text/javascript" id="MathJax-script" src="https://cdn.jsdelivr.net/npm/mathjax@3.2.2/es5/tex-mml-chtml.js" integrity="sha256-MASABpB4tYktI2Oitl4t+78w/lyA+D7b/s9GEP0JOGI=" crossorigin="anonymous"></script> <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/pseudocode@2.4.1/build/pseudocode.min.js" integrity="sha256-aVkDxqyzrB+ExUsOY9PdyelkDhn/DfrjWu08aVpqNlo=" crossorigin="anonymous"></script> <script>document.addEventListener("readystatechange",()=>{"complete"===document.readyState&&document.querySelectorAll("pre>code.language-pseudocode").forEach(e=>{const t=e.textContent,d=e.parentElement.parentElement;let n=document.createElement("pre");n.classList.add("pseudocode");const o=document.createTextNode(t);n.appendChild(o),d.appendChild(n),d.removeChild(e.parentElement),pseudocode.renderElement(n)})});</script> <script type="text/javascript">function progressBarSetup(){"max"in document.createElement("progress")?(initializeProgressElement(),$(document).on("scroll",function(){progressBar.attr({value:getCurrentScrollPosition()})}),$(window).on("resize",initializeProgressElement)):(resizeProgressBar(),$(document).on("scroll",resizeProgressBar),$(window).on("resize",resizeProgressBar))}function getCurrentScrollPosition(){return $(window).scrollTop()}function initializeProgressElement(){let e=$("#navbar").outerHeight(!0);$("body").css({"padding-top":e}),$("progress-container").css({"padding-top":e}),progressBar.css({top:e}),progressBar.attr({max:getDistanceToScroll(),value:getCurrentScrollPosition()})}function getDistanceToScroll(){return $(document).height()-$(window).height()}function resizeProgressBar(){progressBar.css({width:getWidthPercentage()+"%"})}function getWidthPercentage(){return getCurrentScrollPosition()/getDistanceToScroll()*100}const progressBar=$("#progress");window.onload=function(){setTimeout(progressBarSetup,50)};</script> <script src="/assets/js/tabs.min.js?b8748955e1076bbe0dabcf28f2549fdc"></script> <script src="/assets/js/vanilla-back-to-top.min.js?f40d453793ff4f64e238e420181a1d17"></script> <script>addBackToTop();</script> <script type="module" src="/assets/js/search/ninja-keys.min.js?a3446f084dcaecc5f75aa1757d087dcf"></script> <ninja-keys hidebreadcrumbs noautoloadmdicons placeholder="Type to start searching"></ninja-keys> <script>let searchTheme=determineComputedTheme();const ninjaKeys=document.querySelector("ninja-keys");"dark"===searchTheme?ninjaKeys.classList.add("dark"):ninjaKeys.classList.remove("dark");const openSearchModal=()=>{const e=$("#navbarNav");e.hasClass("show")&&e.collapse("hide"),ninjaKeys.open()};</script> <script>const ninja=document.querySelector("ninja-keys");ninja.data=[{id:"nav-about",title:"About",section:"Navigation",handler:()=>{window.location.href="/"}},{id:"nav-cv",title:"CV",description:"Curriculum Vitae",section:"Navigation",handler:()=>{window.location.href="/cv/"}},{id:"nav-projects",title:"Projects",description:"Research projects and open-source tools",section:"Navigation",handler:()=>{window.location.href="/projects/"}},{id:"nav-blog",title:"Blog",description:"",section:"Navigation",handler:()=>{window.location.href="/blog/"}},{id:"post-agent-harness-part-1-workflow-mechanisms-in-humanize-h1-and-codex",title:"Agent Harness, Part 1: Workflow Mechanisms in Humanize h1 and Codex",description:"A workflow-focused study of two agent harness mechanisms: Humanize h1&#39;s RLCR loop and Codex&#39;s review and goal systems.",section:"Posts",handler:()=>{window.location.href="/blog/2026/agent-harness-workflows/"}},{id:"post-paper-reading-event-tensor-a-unified-abstraction-for-compiling-dynamic-megakernel",title:"(Paper Reading) Event Tensor: A Unified Abstraction for Compiling Dynamic Megakernel",description:"Detailed notes on Event Tensor, a compiler abstraction for dynamic GPU megakernels with symbolic-shape and data-dependent task dependencies.",section:"Posts",handler:()=>{window.location.href="/blog/2026/event-tensor-dynamic-megakernel/"}},{id:"post-inside-mirage-3-megakernel-persistent-runtime",title:"Inside Mirage (3) - Megakernel Persistent Runtime",description:"Deep dive into Mirage&#39;s MPK runtime - worker-scheduler model, event-driven synchronization, and multi-GPU support",section:"Posts",handler:()=>{window.location.href="/blog/2025/mirage-mpk-runtime/"}},{id:"post-paper-reading-mirage-persistent-kernel-mpk",title:"Paper Reading - Mirage Persistent Kernel (MPK)",description:"Notes on the Mirage MPK paper - a compiler and runtime for mega-kernelizing tensor programs",section:"Posts",handler:()=>{window.location.href="/blog/2025/mirage-mpk-paper/"}},{id:"post-inside-mirage-2-transpiler-from-mugraph-to-cuda",title:"Inside Mirage (2) - Transpiler from MuGraph to CUDA",description:"Deep dive into Mirage&#39;s transpiler - the journey from MuGraph to CUDA through fusion resolution, layout planning, scheduling, and code generation",section:"Posts",handler:()=>{window.location.href="/blog/2025/mirage-transpiler-cuda/"}},{id:"post-inside-mirage-1-superoptimizing-tensor-programs-via-mugraph-and-search",title:"Inside Mirage (1) - Superoptimizing Tensor Programs via MuGraph and Search",description:"Diving into Mirage&#39;s MuGraph IR and search algorithms - how a superoptimizer finds GPU kernels that hand-written fusion rules could never dream of",section:"Posts",handler:()=>{window.location.href="/blog/2025/mirage-ir-search/"}},{id:"post-a-first-look-at-pypto-quot-tile-amp-human-quot",title:"A First Look at PyPTO. &quot;Tile &amp; Human&quot;",description:"Exploring Huawei&#39;s PyPTO - a tile-based programming paradigm that puts humans back in the optimization loop, because sometimes NP-Hard problems need human wisdom",section:"Posts",handler:()=>{window.location.href="/blog/2025/first-look-pypto/"}},{id:"post-paper-reading-act-automatically-generating-compiler-backends-from-tensor-accelerator-isa-descriptions",title:"(Paper Reading) ACT, Automatically Generating Compiler Backends from Tensor Accelerator ISA Descriptions",description:"Paper reading on ACT - a compiler-compiler that auto-generates compiler backends from tensor accelerator ISA descriptions, solving the eternal pain of custom accelerator adoption",section:"Posts",handler:()=>{window.location.href="/blog/2025/act-paper/"}},{id:"post-llm-in-very-daily-life-enjoy-claude-code-and-gemini-cli-39-s-super-power",title:"LLM in very daily life? Enjoy Claude Code and Gemini-cli&#39;s super power!",description:"Share an expierence of using LLM agents for life (rather than for work)",section:"Posts",handler:()=>{window.location.href="/blog/2025/LLM-in-life/"}},{id:"post-what-if-you-never-had-to-choose-a-journey-into-e-graphs-and-equality-saturation",title:"What if You Never Had to Choose? A Journey into E-graphs and Equality...",description:"How e-graphs turn the optimizer&#39;s dilemma into a solved problem by keeping all the good ideas at once, featuring real examples, bad jokes, and the magic of egg",section:"Posts",handler:()=>{window.location.href="/blog/2025/egg-basics/"}},{id:"post-glancing-at-the-simulation-landscape",title:"Glancing at the Simulation Landscape",description:"Survey on simulation tools for computer architecture research",section:"Posts",handler:()=>{window.location.href="/blog/2025/sim/"}},{id:"news-our-paper-isamore-has-been-accepted-to-asplos-2026-looking-forward-to-presenting-our-work-on-isa-design-space-exploration",title:"Our paper **ISAMORE** has been accepted to **ASPLOS 2026**! Looking forward to presenting...",description:"",section:"News"},{id:"news-successfully-held-our-aps-mlir-https-pku-liang-github-io-aps-mlir-tutorial-tutorial-at-asp-dac-2026-in-hong-kong",title:"Successfully held our [APS-MLIR](https://pku-liang.github.io/aps-mlir-tutorial/) tutorial at **ASP-DAC 2026** in Hong Kong!",description:"",section:"News"},{id:"news-i-will-present-eggmind-at-the-architecture-2-0-workshop-and-isamore-in-the-main-program-at-asplos-2026",title:"I will present **EggMind** at the **Architecture 2.0 Workshop** and **ISAMORE** in the...",description:"",section:"News"},{id:"news-isamore-winnes-the-asplos-2026-best-paper-award-5-1048",title:"**ISAMORE** winnes the **ASPLOS 2026 Best Paper Award** (**5/1048**)!",description:"",section:"News"},{id:"projects-aps-aquas",title:"APS/Aquas",description:"Holistic MLIR-based ASIP hardware-software co-design framework",section:"Projects",handler:()=>{window.location.href="/projects/aps/"}},{id:"projects-cayman",title:"Cayman",description:"Automatic accelerator generation with control flow and data access optimization",section:"Projects",handler:()=>{window.location.href="/projects/cayman/"}},{id:"projects-cement",title:"Cement",description:"Cycle-deterministic embedded HDL in Rust with event-based control synthesis",section:"Projects",handler:()=>{window.location.href="/projects/cement/"}},{id:"projects-eggmind",title:"EggMind",description:"LLM-guided EqSat strategy synthesis with explicit strategy artifacts",section:"Projects",handler:()=>{window.location.href="/projects/eggmind/"}},{id:"projects-hector",title:"Hector",description:"Multi-level IR for hardware synthesis built on MLIR",section:"Projects",handler:()=>{window.location.href="/projects/hector/"}},{id:"projects-hive",title:"Hive",description:"Multi-agent inference infrastructure for algorithm- and task-level scaling",section:"Projects",handler:()=>{window.location.href="/projects/hive/"}},{id:"projects-intellic",title:"IntelliC",description:"Human- and LLM-friendly intelligent compiler infrastructure with inspectable representations",section:"Projects",handler:()=>{window.location.href="/projects/intellic/"}},{id:"projects-isamore",title:"ISAMORE",description:"Finding reusable instructions via e-graph anti-unification",section:"Projects",handler:()=>{window.location.href="/projects/isamore/"}},{id:"projects-pto-runtime",title:"PTO Runtime",description:"Ascend task-graph runtime coordinating host, AICPU, and AICore execution",section:"Projects",handler:()=>{window.location.href="/projects/pto-runtime/"}},{id:"projects-skyegg",title:"SkyEgg",description:"Joint implementation selection and scheduling using e-graphs",section:"Projects",handler:()=>{window.location.href="/projects/skyegg/"}},{id:"socials-email",title:"Send email",section:"Socials",handler:()=>{window.open("mailto:%73%68%61%6C%6C%77%65%78%69%61%6F@%67%6D%61%69%6C.%63%6F%6D","_blank")}},{id:"socials-orcid",title:"ORCID",section:"Socials",handler:()=>{window.open("https://orcid.org/0000-0002-3636-3685","_blank")}},{id:"socials-github",title:"GitHub",section:"Socials",handler:()=>{window.open("https://github.com/uv-xiao","_blank")}},{id:"socials-linkedin",title:"LinkedIn",section:"Socials",handler:()=>{window.open("https://www.linkedin.com/in/youwei-xiao-070113282","_blank")}},{id:"socials-x",title:"X",description:"Twitter",section:"Socials",handler:()=>{window.open("https://twitter.com/youwei_xiao","_blank")}},{id:"socials-dblp",title:"DBLP",section:"Socials",handler:()=>{window.open("https://dblp.org/pid/336/0763.html","_blank")}},{id:"socials-rss",title:"RSS Feed",section:"Socials",handler:()=>{window.open("/feed.xml","_blank")}},{id:"light-theme",title:"Change theme to light",description:"Change the theme of the site to Light",section:"Theme",handler:()=>{setThemeSetting("light")}},{id:"dark-theme",title:"Change theme to dark",description:"Change the theme of the site to Dark",section:"Theme",handler:()=>{setThemeSetting("dark")}},{id:"system-theme",title:"Use system default theme",description:"Change the theme of the site to System Default",section:"Theme",handler:()=>{setThemeSetting("system")}}];</script> <script src="/assets/js/shortcut-key.js?6f508d74becd347268a7f822bca7309d"></script> </body> </html>
