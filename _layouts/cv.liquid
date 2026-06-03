@@ -25,7 +25,7 @@ layout: default
       <div class="cv">
         {% for entry in site.data.cv %}
           <a class="anchor" id="{{ entry.title }}"></a>
-          <div class="card mt-3 p-3">
+          <div class="card mt-3 p-3{% if entry.type == 'research_story' %} cv-research-card{% endif %}">
             <h3 class="card-title font-weight-medium">{{ entry.title }}</h3>
             <div>
               {% if entry.type == 'list' %}
@@ -38,6 +38,8 @@ layout: default
                 {% include cv/time_table.liquid %}
               {% elsif entry.type == 'list_groups' %}
                 {% include cv/list_groups.liquid %}
+              {% elsif entry.type == 'research_story' %}
+                {% include cv/research_story.liquid %}
               {% else %}
                 {{ entry.contents }}
               {% endif %}
