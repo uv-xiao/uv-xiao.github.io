@@ -207,6 +207,52 @@ ul.task-list input[type="checkbox"] {
   }
 }
 
+.profile.about-profile .more-info {
+  font-family: 'Share Tech', sans-serif;
+  color: var(--global-text-color);
+  line-height: 1.25;
+  transform: translateX(0.35rem);
+
+  .profile-name-zh {
+    font-family: "PingFang SC", "Noto Sans CJK SC", "Source Han Sans SC", "Microsoft YaHei", sans-serif;
+    font-weight: 500;
+  }
+}
+
+.profile.about-profile .profile-social {
+  margin-top: 0.45rem;
+  margin-bottom: 0.35rem;
+  text-align: center;
+
+  .contact-icons {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+    gap: 0.45rem;
+    font-size: 1.35rem;
+    line-height: 1;
+
+    a {
+      text-decoration: none;
+
+      i::before {
+        color: var(--global-text-color);
+        transition: color 0.2s ease-in-out;
+      }
+
+      &:hover i::before {
+        color: var(--global-theme-color);
+      }
+    }
+  }
+
+  .contact-note {
+    margin-top: 0.3rem;
+    font-size: 0.75rem;
+  }
+}
+
 .profile.float-right {
   margin-left: 1rem;
 }

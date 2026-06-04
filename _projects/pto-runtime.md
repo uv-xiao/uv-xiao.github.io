@@ -1,14 +1,14 @@
 ---
 layout: page
 title: PTO Runtime
-description: Ascend task-graph runtime coordinating host, AICPU, and AICore execution
+description: Ascend chips and LingQu SuperPods task-graph runtime coordinating host, AICPU, and AICore execution
 img:
 importance: 3
 category: tools
 github: https://github.com/uv-xiao/pto-runtime
 ---
 
-**PTO Runtime** focuses on the execution side of compiled tensor workloads on Ascend devices. The core problem is that a compiled tensor program is not just a list of kernels: it is a dependency graph that must coordinate host orchestration, AICPU scheduling, AICore kernel execution, device memory, and simulation or hardware backends. PTO Runtime turns that graph into a three-program execution model with explicit APIs between each layer.
+**PTO Runtime** focuses on the execution side of compiled tensor workloads on Ascend chips and LingQu SuperPods. The core problem is that a compiled tensor program is not just a list of kernels: it is a dependency graph that must coordinate host orchestration, AICPU scheduling, AICore kernel execution, device memory, and simulation or hardware backends. PTO Runtime turns that graph into a three-program execution model with explicit APIs between each layer.
 
 ```text
 Python/compiler graph builder
@@ -45,4 +45,4 @@ while unfinished tasks remain:
             ready.push(succ)
 ```
 
-The project matters because it gives a compiler-generated tensor graph an execution substrate with explicit coordination semantics. Instead of treating host code, device scheduling, and compute kernels as disconnected artifacts, PTO Runtime makes them parts of one graph-driven system that can be debugged in simulation and then moved toward Ascend hardware execution.
+The project matters because it gives a compiler-generated tensor graph an execution substrate with explicit coordination semantics for Ascend chips and LingQu SuperPods. Instead of treating host code, device scheduling, and compute kernels as disconnected artifacts, PTO Runtime makes them parts of one graph-driven system that can be debugged in simulation and then moved toward Ascend hardware execution.
