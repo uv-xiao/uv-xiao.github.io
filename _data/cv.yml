@@ -30,18 +30,28 @@
       - "My research builds compiler-centered hardware-software co-design systems for domain-specific computing. The central problem is how real software demands can be translated into reusable architectural capabilities, realized as high-quality hardware, and exposed back to software through compiler interfaces that remain analyzable, verifiable, and reusable."
       - "<strong>Architecture customization.</strong> I explored compiler techniques and formal methods, especially e-graphs, to automate ISA customization and compiler adaptation. ISAMORE (<a href='https://doi.org/10.1145/3779212.3790162'>DOI</a>) finds reusable custom instructions by anti-unifying equivalent program fragments. Cayman (<a href='https://doi.org/10.1109/DAC63849.2025.11132875'>DOI</a>) discovers accelerator opportunities from whole applications while optimizing control flow and data access. APS (<a href='https://doi.org/10.1109/ICCAD66269.2025.11240817'>DOI</a>, <a href='https://github.com/pku-liang/APS'>GitHub</a>) and Aquas (<a href='https://arxiv.org/abs/2511.22267'>preprint</a>) connect customized hardware capabilities to retargetable compiler support."
       - "<strong>Hardware synthesis.</strong> I created intermediate representations at multiple abstraction levels and proposed synthesis passes that optimize timing, microarchitecture, mapping, and scheduling. Hector (<a href='https://doi.org/10.1145/3508352.3549370'>DOI</a>, <a href='https://github.com/pku-liang/Hector'>GitHub</a>) provides a multi-level MLIR substrate for hardware synthesis. Cement (<a href='https://doi.org/10.1145/3626202.3637561'>DOI</a>) and Cement2 (<a href='https://arxiv.org/abs/2511.15073'>preprint</a>) make cycle timing and temporal transactions first-class FPGA design abstractions. Clay (<a href='https://doi.org/10.1109/ICCAD66269.2025.11240669'>DOI</a>) synthesizes microarchitecture-aware ASIP instructions, while SkyEgg (<a href='https://arxiv.org/abs/2511.15323'>preprint</a>) uses e-graphs for joint implementation selection and scheduling."
-      - "<strong>LLM techniques.</strong> I explored both LLMs for compilers and compiler/system techniques for LLMs. EggMind (<a href='https://arxiv.org/abs/2604.17364'>preprint</a>) uses LLMs to synthesize reusable equality-saturation strategies. IntelliC (<a href='https://github.com/uv-xiao/IntelliC'>GitHub</a>) studies inspectable compiler representations for human and agent collaboration. Spine builds agentic compiler workflows for long-horizon optimization and design adaptation. PTO Runtime (<a href='https://github.com/hw-native-sys/simpler'>GitHub</a>) executes compiled task graphs for serving on Ascend chips and LingQu SuperPods. Hive (<a href='https://arxiv.org/abs/2604.17353'>preprint</a>) extends the systems view to multi-agent inference infrastructure."
+      - "<strong>LLM techniques.</strong> I explored both LLMs for compilers and compiler/system techniques for LLMs. EggMind (<a href='https://arxiv.org/abs/2604.17364'>preprint</a>) uses LLMs to synthesize reusable equality-saturation strategies. IntelliC (<a href='https://github.com/uv-xiao/IntelliC'>GitHub</a>) studies inspectable compiler representations for human and agent collaboration. Spine studies verification-bounded agentic co-design, using typed semantic boundaries and executable checks to connect design intent, architecture descriptions, hardware/compiler artifacts, and validation feedback in a traceable closed loop. PTO Runtime (<a href='https://github.com/hw-native-sys/simpler'>GitHub</a>) executes compiled task graphs for serving on Ascend chips and LingQu SuperPods. Hive (<a href='https://arxiv.org/abs/2604.17353'>preprint</a>) extends the systems view to multi-agent inference infrastructure."
       - "The closed loop is that architecture customization exposes reusable hardware capabilities, hardware synthesis turns them into efficient implementations, and LLM-era techniques advance the earlier compiler and co-design toolchains while providing evolving capabilities that make the loop practical and self-improving."
     diagram:
       classes:
         - title: Architecture customization
           summary: "Compiler/formal methods, especially e-graphs, automate ISA customization and compiler adaptation."
+          summary_lines:
+            - "Compiler/formal methods,"
+            - "especially e-graphs, automate"
+            - "ISA customization and"
+            - "compiler adaptation."
           works:
             - { name: ISAMORE, tag: "ASPLOS '26", link: "https://doi.org/10.1145/3779212.3790162" }
             - { name: Cayman, tag: "DAC '25", link: "https://doi.org/10.1109/DAC63849.2025.11132875" }
             - { name: APS / Aquas, tag: "ICCAD '25 + arXiv", link: "https://arxiv.org/abs/2511.22267" }
         - title: Hardware synthesis
           summary: "Multi-level IRs and synthesis passes optimize timing, microarchitecture, mapping, and scheduling."
+          summary_lines:
+            - "Multi-level IRs and synthesis"
+            - "passes optimize timing,"
+            - "microarchitecture, mapping,"
+            - "and scheduling."
           works:
             - { name: Hector, tag: "ICCAD '22", link: "https://doi.org/10.1145/3508352.3549370" }
             - { name: Cement / Cement2, tag: "FPGA '24 + arXiv", link: "https://arxiv.org/abs/2511.15073" }
@@ -49,6 +59,10 @@
             - { name: SkyEgg, tag: "arXiv", link: "https://arxiv.org/abs/2511.15323" }
         - title: LLM techniques
           summary: "LLMs improve compiler/co-design workflows; compiler and runtime systems support LLM workloads."
+          summary_lines:
+            - "LLMs improve compiler/co-design"
+            - "workflows; compiler and runtime"
+            - "systems support LLM workloads."
           works:
             - { name: EggMind, tag: "arXiv", link: "https://arxiv.org/abs/2604.17364" }
             - { name: IntelliC, tag: "GitHub", link: "https://github.com/uv-xiao/IntelliC" }
@@ -56,11 +70,11 @@
             - { name: PTO Runtime, tag: "GitHub", link: "https://github.com/hw-native-sys/simpler" }
             - { name: Hive, tag: "arXiv", link: "https://arxiv.org/abs/2604.17353" }
       relationships:
-        - { from: Architecture customization, to: Hardware synthesis, label: "custom capabilities become implementations" }
-        - { from: Hardware synthesis, to: Architecture customization, label: "hardware constraints guide customization" }
-        - { from: Hardware synthesis, to: LLM techniques, label: "IR/runtime evidence grounds agents" }
-        - { from: LLM techniques, to: Architecture customization, label: "LLM-era workflows evolve customization" }
-        - { from: LLM techniques, to: Hardware synthesis, label: "agents improve synthesis toolchains" }
+        - { from: Architecture customization, to: Hardware synthesis, label: "custom capabilities become implementations", label_lines: ["custom capabilities", "become implementations"] }
+        - { from: Hardware synthesis, to: Architecture customization, label: "hardware constraints guide customization", label_lines: ["hardware constraints", "guide customization"] }
+        - { from: Hardware synthesis, to: LLM techniques, label: "IR/runtime evidence grounds agents", label_lines: ["IR/runtime evidence", "grounds agents"] }
+        - { from: LLM techniques, to: Architecture customization, label: "LLM-era workflows evolve customization", label_lines: ["LLM-era workflows", "evolve customization"] }
+        - { from: LLM techniques, to: Hardware synthesis, label: "agents improve synthesis toolchains", label_lines: ["agents improve", "synthesis toolchains"] }
 
 - title: Selected Publications
   type: time_table

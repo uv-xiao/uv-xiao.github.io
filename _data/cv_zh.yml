@@ -1,0 +1,181 @@
+- title: 基本信息
+  type: map
+  contents:
+    - name: 姓名
+      value: 肖有为 (Youwei Xiao)
+    - name: 邮箱
+      value: shallwe@pku.edu.cn
+    - name: 电话
+      value: +86 185 1920 4005
+
+- title: 教育经历
+  type: time_table
+  contents:
+    - title: 集成电路科学与工程博士研究生
+      institution: 北京大学集成电路学院
+      location: 中国北京
+      year: 2022 - 至今
+      description:
+        - "导师：梁云教授"
+        - "研究方向：围绕敏捷芯片设计与编译优化的软硬件协同"
+    - title: 计算机科学与技术理学学士
+      institution: 北京大学信息科学技术学院
+      location: 中国北京
+      year: 2018 - 2022
+
+- title: 研究方向
+  type: research_story
+  contents:
+    paragraphs:
+      - "我的研究围绕敏捷芯片设计与编译优化的软硬件协同展开。核心问题是：如何把真实软件需求转化为可复用的体系结构能力，将其实现为高质量硬件，并通过可分析、可验证、可复用的编译接口重新暴露给软件栈。"
+      - "<strong>架构定制。</strong> 我探索使用编译技术和形式化方法，特别是 e-graph 技术，自动化 ISA 定制和编译器适配。ISAMORE (<a href='https://doi.org/10.1145/3779212.3790162'>DOI</a>) 通过对等价程序片段进行反一化来发现可复用自定义指令。Cayman (<a href='https://doi.org/10.1109/DAC63849.2025.11132875'>DOI</a>) 从完整应用中发现加速器机会，并同时优化控制流和数据访问。APS (<a href='https://doi.org/10.1109/ICCAD66269.2025.11240817'>DOI</a>, <a href='https://github.com/pku-liang/APS'>GitHub</a>) 和 Aquas (<a href='https://arxiv.org/abs/2511.22267'>preprint</a>) 将定制硬件能力连接到可重定向的编译器支持。"
+      - "<strong>硬件综合。</strong> 我在多个抽象层次创建中间表示，并提出综合优化 pass，用于优化时序、微架构、映射和调度。Hector (<a href='https://doi.org/10.1145/3508352.3549370'>DOI</a>, <a href='https://github.com/pku-liang/Hector'>GitHub</a>) 为硬件综合方法提供多层 MLIR 基础设施。Cement (<a href='https://doi.org/10.1145/3626202.3637561'>DOI</a>) 和 Cement2 (<a href='https://arxiv.org/abs/2511.15073'>preprint</a>) 将周期时序和时间事务提升为 FPGA 设计的一等抽象。Clay (<a href='https://doi.org/10.1109/ICCAD66269.2025.11240669'>DOI</a>) 综合微架构感知的 ASIP 指令，SkyEgg (<a href='https://arxiv.org/abs/2511.15323'>preprint</a>) 使用 e-graph 联合进行实现选择与调度。"
+      - "<strong>大模型技术。</strong> 我同时探索大模型用于编译器，以及编译器/系统技术支撑大模型。EggMind (<a href='https://arxiv.org/abs/2604.17364'>preprint</a>) 使用大模型综合可复用的等式饱和策略。IntelliC (<a href='https://github.com/uv-xiao/IntelliC'>GitHub</a>) 研究面向人与智能体协作的可检查编译表示。Spine 研究验证有界的智能体协同设计，用类型化语义边界和可执行检查，将设计意图、架构描述、硬件/编译器产物和验证反馈连接成可追踪闭环。PTO Runtime (<a href='https://github.com/hw-native-sys/simpler'>GitHub</a>) 面向昇腾芯片和灵衢超节点执行编译后的任务图，用于分布式推理服务。Hive (<a href='https://arxiv.org/abs/2604.17353'>preprint</a>) 将系统视角扩展到多智能体推理基础设施。"
+      - "这一闭环的逻辑是：架构定制暴露可复用硬件能力，硬件综合将其转化为高效实现，而大模型时代的技术推进既有编译和协同设计工具链，并提供持续演化的能力，使该闭环真正变得可实践、可自我改进。"
+    diagram:
+      classes:
+        - title: 架构定制
+          summary: "编译与形式化方法，特别是 e-graph，自动化 ISA 定制和编译器适配。"
+          summary_lines:
+            - "编译与形式化方法，"
+            - "特别是 e-graph，自动化"
+            - "ISA 定制和"
+            - "编译器适配。"
+          works:
+            - { name: ISAMORE, tag: "ASPLOS '26", link: "https://doi.org/10.1145/3779212.3790162" }
+            - { name: Cayman, tag: "DAC '25", link: "https://doi.org/10.1109/DAC63849.2025.11132875" }
+            - { name: APS / Aquas, tag: "ICCAD '25 + arXiv", link: "https://arxiv.org/abs/2511.22267" }
+        - title: 硬件综合
+          summary: "多层 IR 和综合 pass 优化时序、微架构、映射与调度。"
+          summary_lines:
+            - "多层 IR 和综合 pass"
+            - "优化时序、微架构、"
+            - "映射与调度。"
+          works:
+            - { name: Hector, tag: "ICCAD '22", link: "https://doi.org/10.1145/3508352.3549370" }
+            - { name: Cement / Cement2, tag: "FPGA '24 + arXiv", link: "https://arxiv.org/abs/2511.15073" }
+            - { name: Clay, tag: "ICCAD '25", link: "https://doi.org/10.1109/ICCAD66269.2025.11240669" }
+            - { name: SkyEgg, tag: "arXiv", link: "https://arxiv.org/abs/2511.15323" }
+        - title: 大模型技术
+          summary: "大模型推进编译/协同设计流程；编译器和运行时系统支撑大模型负载。"
+          summary_lines:
+            - "大模型推进编译与"
+            - "协同设计流程；"
+            - "编译器和运行时"
+            - "支撑大模型负载。"
+          works:
+            - { name: EggMind, tag: "arXiv", link: "https://arxiv.org/abs/2604.17364" }
+            - { name: IntelliC, tag: "GitHub", link: "https://github.com/uv-xiao/IntelliC" }
+            - { name: Spine, tag: "", link: "" }
+            - { name: PTO Runtime, tag: "GitHub", link: "https://github.com/hw-native-sys/simpler" }
+            - { name: Hive, tag: "arXiv", link: "https://arxiv.org/abs/2604.17353" }
+      relationships:
+        - { from: 架构定制, to: 硬件综合, label: "定制能力转化为实现", label_lines: ["定制能力", "转化为实现"] }
+        - { from: 硬件综合, to: 架构定制, label: "硬件约束指导定制", label_lines: ["硬件约束", "指导定制"] }
+        - { from: 硬件综合, to: 大模型技术, label: "IR/运行时证据约束智能体", label_lines: ["IR/运行时证据", "约束智能体"] }
+        - { from: 大模型技术, to: 架构定制, label: "智能体流程演化定制方法", label_lines: ["智能体流程", "演化定制方法"] }
+        - { from: 大模型技术, to: 硬件综合, label: "智能体改进综合工具链", label_lines: ["智能体改进", "综合工具链"] }
+
+- title: 代表性论文
+  type: time_table
+  contents:
+    - title: "LLM-Guided Strategy Synthesis for Scalable Equality Saturation"
+      institution: arXiv 预印本
+      year: 2026
+      description:
+        - "Chenyun Yin*, Youwei Xiao*, Yuze Luo, Yuyang Zou, Yun Liang (*共同一作)"
+    - title: "Hive: A Multi-Agent Infrastructure for Algorithm- and Task-Level Scaling"
+      institution: arXiv 预印本
+      year: 2026
+      description:
+        - "Zizhang Luo, Yuhao Luo, Youwei Xiao, Yansong Xu, Runlin Guo, Yun Liang"
+    - title: "ISAMORE: Finding Reusable Instructions via E-Graph Anti-Unification"
+      institution: ASPLOS 2026 (最佳论文奖，5/1048)
+      year: 2026
+      description:
+        - "Youwei Xiao, Chenyun Yin, Yitian Sun, Yun Liang"
+    - title: "APS: Open-Source Hardware-Software Co-Design Framework for Agile Processor Specialization"
+      institution: ICCAD 2025 (邀请论文)
+      year: 2025
+      description:
+        - "Youwei Xiao, Yuyang Zou, Yansong Xu, et al."
+    - title: "Clay: High-level ASIP Framework for Flexible Microarchitecture-Aware Instruction Customization"
+      institution: ICCAD 2025
+      year: 2025
+      description:
+        - "Weijie Peng*, Youwei Xiao*, Yuyang Zou, et al. (*共同一作)"
+    - title: "Cayman: Custom Accelerator Generation with Control Flow and Data Access Optimization"
+      institution: DAC 2025
+      year: 2025
+      description:
+        - "Youwei Xiao, Fan Cui, Zizhang Luo, Weijie Peng, Yun Liang"
+    - title: "Cement: Streamlining FPGA Hardware Design with Cycle-Deterministic eHDL and Synthesis"
+      institution: FPGA 2024
+      year: 2024
+      description:
+        - "Youwei Xiao, Zizhang Luo, Kexing Zhou, Yun Liang"
+    - title: "HECTOR: A Multi-Level Intermediate Representation for Hardware Synthesis Methodologies"
+      institution: ICCAD 2022
+      year: 2022
+      description:
+        - "Ruifan Xu, Youwei Xiao, Jin Luo, Yun Liang"
+
+- title: 荣誉奖励
+  type: time_table
+  contents:
+    - title: "学术之芯"
+      institution: "2026年度，北京大学集成电路学院；授予8人"
+      year: 2026
+    - title: "博士研究生校长奖学金"
+      institution: "2026-2027学年，北京大学；集成电路学院授予10人"
+      year: 2026-2027
+    - title: ASPLOS 2026 最佳论文奖
+      institution: "\"Finding Reusable Instructions via E-Graph Anti-Unification\" (ISAMORE)，获 ASPLOS 2026 最佳论文奖 (5/1048)"
+      year: 2026年3月
+    - title: 杨芙清-王阳元院士奖学金
+      institution: 北京大学信息科学技术学院仅5人获奖
+      year: 2018-2019
+    - title: 深圳证券交易所奖学金
+      institution: 北京大学信息科学技术学院17人获奖
+      year: 2019-2020
+    - title: 三好学生
+      institution: 综合表现优秀，授予前10%学生
+      year: 2018-2020
+    - title: EDAthon 2020 第二名
+      institution: IEEE CEDA Hong Kong Chapter 电子设计自动化编程竞赛
+      year: 2020年8月
+    - title: NOI 2017 二等奖
+      institution: 中国计算机学会，全国青少年信息学奥林匹克竞赛
+      year: 2017年7月
+    - title: APIO 2017 二等奖
+      institution: 中国计算机学会，亚太地区信息学奥林匹克中国赛区
+      year: 2017年5月
+
+- title: 教程报告
+  type: time_table
+  contents:
+    - title: "APS: An MLIR-Based Hardware-Software Co-design Framework"
+      institution: ASP-DAC 2026，中国香港
+      year: 2026年1月
+    - title: "Agile Hardware Specialization: A toolbox for Agile Chip Front-end Design"
+      institution: ISEDA 2025，中国香港
+      year: 2025年5月
+    - title: "Agile Hardware Specialization (AHS): A toolbox for Agile Chip Front-end Design"
+      institution: ASPLOS 2025，荷兰鹿特丹
+      year: 2025年3月
+    - title: "Agile Hardware Specialization: A toolbox for Agile Chip Front-end Design"
+      institution: DATE 2025，法国里昂
+      year: 2025年3月
+    - title: "AHS: An EDA toolbox for Agile Chip Front-end Design"
+      institution: ASP-DAC 2025，日本东京
+      year: 2025年1月
+
+- title: 教学经历
+  type: time_table
+  contents:
+    - title: 高层次芯片设计课程助教
+      institution: 北京大学
+      year: 2022年春季、2022年秋季
+    - title: 计算机系统导论课程助教
+      institution: 北京大学
+      year: 2020年秋季

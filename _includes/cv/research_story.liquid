@@ -27,10 +27,9 @@
         <rect x="30" y="104" width="280" height="260" rx="4"></rect>
         <text class="research-svg-title" x="170" y="144">{{ arch_class.title }}</text>
         <text class="research-svg-body" x="54" y="174">
-          <tspan x="54" dy="0">Compiler/formal methods,</tspan>
-          <tspan x="54" dy="20">especially e-graphs, automate</tspan>
-          <tspan x="54" dy="20">ISA customization and</tspan>
-          <tspan x="54" dy="20">compiler adaptation.</tspan>
+          {% for line in arch_class.summary_lines %}
+            <tspan x="54" dy="{% if forloop.first %}0{% else %}20{% endif %}">{{ line }}</tspan>
+          {% endfor %}
         </text>
         {% for work in arch_class.works %}
           {% assign work_y = forloop.index0 | times: 24 | plus: 274 %}
@@ -46,10 +45,9 @@
         <rect x="460" y="104" width="280" height="260" rx="4"></rect>
         <text class="research-svg-title" x="600" y="144">{{ synth_class.title }}</text>
         <text class="research-svg-body" x="484" y="174">
-          <tspan x="484" dy="0">Multi-level IRs and synthesis</tspan>
-          <tspan x="484" dy="20">passes optimize timing,</tspan>
-          <tspan x="484" dy="20">microarchitecture, mapping,</tspan>
-          <tspan x="484" dy="20">and scheduling.</tspan>
+          {% for line in synth_class.summary_lines %}
+            <tspan x="484" dy="{% if forloop.first %}0{% else %}20{% endif %}">{{ line }}</tspan>
+          {% endfor %}
         </text>
         {% for work in synth_class.works %}
           {% assign work_y = forloop.index0 | times: 22 | plus: 260 %}
@@ -65,9 +63,9 @@
         <rect x="890" y="104" width="280" height="260" rx="4"></rect>
         <text class="research-svg-title" x="1030" y="144">{{ llm_class.title }}</text>
         <text class="research-svg-body" x="914" y="174">
-          <tspan x="914" dy="0">LLMs improve compiler/co-design</tspan>
-          <tspan x="914" dy="20">workflows; compiler and runtime</tspan>
-          <tspan x="914" dy="20">systems support LLM workloads.</tspan>
+          {% for line in llm_class.summary_lines %}
+            <tspan x="914" dy="{% if forloop.first %}0{% else %}20{% endif %}">{{ line }}</tspan>
+          {% endfor %}
         </text>
         {% for work in llm_class.works %}
           {% assign work_y = forloop.index0 | times: 22 | plus: 252 %}
@@ -82,36 +80,41 @@
       <path class="research-svg-connector research-svg-blue-stroke" marker-end="url(#research-arrow-blue)" d="M170 104 L170 62 Q170 50 182 50 L508 50 Q520 50 520 62 L520 104"></path>
       <rect class="research-svg-label-bg" x="260" y="33" width="170" height="34" rx="4"></rect>
       <text class="research-svg-label research-svg-blue-text" x="345" y="47">
-        <tspan x="345" dy="0">{{ arch_to_synth.label | split: ' become ' | first }}</tspan>
-        <tspan x="345" dy="14">become implementations</tspan>
+        {% for line in arch_to_synth.label_lines %}
+          <tspan x="345" dy="{% if forloop.first %}0{% else %}14{% endif %}">{{ line }}</tspan>
+        {% endfor %}
       </text>
 
       <path class="research-svg-connector research-svg-blue-stroke" marker-end="url(#research-arrow-blue)" d="M680 104 L680 62 Q680 50 692 50 L1018 50 Q1030 50 1030 62 L1030 104"></path>
       <rect class="research-svg-label-bg" x="770" y="33" width="170" height="34" rx="4"></rect>
       <text class="research-svg-label research-svg-blue-text" x="855" y="47">
-        <tspan x="855" dy="0">IR/runtime evidence</tspan>
-        <tspan x="855" dy="14">grounds agents</tspan>
+        {% for line in synth_to_llm.label_lines %}
+          <tspan x="855" dy="{% if forloop.first %}0{% else %}14{% endif %}">{{ line }}</tspan>
+        {% endfor %}
       </text>
 
       <path class="research-svg-connector research-svg-green-stroke" marker-end="url(#research-arrow-green)" d="M545 364 L545 400 Q545 412 533 412 L242 412 Q230 412 230 400 L230 364"></path>
       <rect class="research-svg-label-bg" x="312" y="394" width="162" height="34" rx="4"></rect>
       <text class="research-svg-label research-svg-green-text" x="393" y="408">
-        <tspan x="393" dy="0">hardware constraints</tspan>
-        <tspan x="393" dy="14">guide customization</tspan>
+        {% for line in synth_to_arch.label_lines %}
+          <tspan x="393" dy="{% if forloop.first %}0{% else %}14{% endif %}">{{ line }}</tspan>
+        {% endfor %}
       </text>
 
       <path class="research-svg-connector research-svg-green-stroke" marker-end="url(#research-arrow-green)" d="M975 364 L975 400 Q975 412 963 412 L672 412 Q660 412 660 400 L660 364"></path>
       <rect class="research-svg-label-bg" x="745" y="394" width="155" height="34" rx="4"></rect>
       <text class="research-svg-label research-svg-green-text" x="822" y="408">
-        <tspan x="822" dy="0">agents improve</tspan>
-        <tspan x="822" dy="14">synthesis toolchains</tspan>
+        {% for line in llm_to_synth.label_lines %}
+          <tspan x="822" dy="{% if forloop.first %}0{% else %}14{% endif %}">{{ line }}</tspan>
+        {% endfor %}
       </text>
 
       <path class="research-svg-connector research-svg-green-stroke" marker-end="url(#research-arrow-green)" d="M1110 364 L1110 440 Q1110 452 1098 452 L102 452 Q90 452 90 440 L90 364"></path>
       <rect class="research-svg-label-bg" x="505" y="434" width="190" height="34" rx="4"></rect>
       <text class="research-svg-label research-svg-green-text" x="600" y="448">
-        <tspan x="600" dy="0">LLM-era workflows</tspan>
-        <tspan x="600" dy="14">evolve customization</tspan>
+        {% for line in llm_to_arch.label_lines %}
+          <tspan x="600" dy="{% if forloop.first %}0{% else %}14{% endif %}">{{ line }}</tspan>
+        {% endfor %}
       </text>
     </svg>
   </div>

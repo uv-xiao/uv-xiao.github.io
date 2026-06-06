@@ -77,6 +77,30 @@ div.container-links {
   margin-bottom: 0.5rem;
 }
 
+nav.cv-language-switch {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+nav.cv-language-switch a {
+  border: 1px solid var(--global-divider-color);
+  border-radius: 0.25rem;
+  color: var(--global-text-color);
+  font-size: 0.8rem;
+  line-height: 1;
+  padding: 0.35rem 0.65rem;
+  text-decoration: none;
+}
+
+nav.cv-language-switch a:hover,
+nav.cv-language-switch a.active {
+  border-color: var(--global-theme-color);
+  color: var(--global-theme-color);
+  text-decoration: none;
+}
+
 /*****************************
  * CV RESEARCH STORY styles
  *****************************/

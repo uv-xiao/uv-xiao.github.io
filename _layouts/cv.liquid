@@ -2,6 +2,8 @@
 layout: default
 ---
 {% unless site.data.resume %}
+  {% assign cv_data_name = page.cv_data | default: 'cv' %}
+  {% assign cv_entries = site.data[cv_data_name] %}
   <div class="post">
     <header class="post-header">
       <h1 class="post-title">
@@ -19,11 +21,18 @@ layout: default
       {% if page.description %}
         <p class="post-description">{{ page.description }}</p>
       {% endif %}
+      {% if page.cv_languages %}
+        <nav class="cv-language-switch" aria-label="CV language">
+          {% for lang in page.cv_languages %}
+            <a class="{% if lang.active %}active{% endif %}" href="{{ lang.url | relative_url }}">{{ lang.label }}</a>
+          {% endfor %}
+        </nav>
+      {% endif %}
     </header>
 
     <article>
       <div class="cv">
-        {% for entry in site.data.cv %}
+        {% for entry in cv_entries %}
           <a class="anchor" id="{{ entry.title }}"></a>
           <div class="card mt-3 p-3{% if entry.type == 'research_story' %} cv-research-card{% endif %}">
             <h3 class="card-title font-weight-medium">{{ entry.title }}</h3>
