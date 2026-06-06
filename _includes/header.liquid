@@ -1,9 +1,13 @@
 <header>
+  {% assign is_zh_page = false %}
+  {% if page.lang contains 'zh' or page.url contains '/zh/' %}
+    {% assign is_zh_page = true %}
+  {% endif %}
   <!-- Nav Bar -->
   <nav id="navbar" class="navbar navbar-light navbar-expand-sm {% if site.navbar_fixed %}fixed-top{% else %}sticky-top{% endif %}" role="navigation">
     <div class="container">
       {% if page.permalink != '/' %}
-        <a class="navbar-brand title font-weight-lighter" href="{{ site.baseurl }}/">
+        <a class="navbar-brand title font-weight-lighter" href="{% if is_zh_page %}{{ '/zh/' | relative_url }}{% else %}{{ site.baseurl }}/{% endif %}">
           {% if site.title == 'blank' %}
             {% if site.first_name %}
               <span class="font-weight-bold">
@@ -47,19 +51,36 @@
           {% endfor %}
 
           <!-- About -->
-          <li class="nav-item {% if page.permalink == '/' %}active{% endif %}">
-            <a class="nav-link" href="{{ '/' | relative_url }}">
-              {{- about_title }}
-              {% if page.permalink == '/' %}
+          {% if is_zh_page %}
+            {% assign about_url = '/zh/' %}
+            {% assign about_label = '关于' %}
+          {% else %}
+            {% assign about_url = '/' %}
+            {% assign about_label = about_title %}
+          {% endif %}
+          <li class="nav-item {% if page.permalink == about_url %}active{% endif %}">
+            <a class="nav-link" href="{{ about_url | relative_url }}">
+              {{- about_label }}
+              {% if page.permalink == about_url %}
                 <span class="sr-only">(current)</span>
               {% endif %}
             </a>
           </li>
 
           <!-- Other pages -->
-          {% assign sorted_pages = site.pages | sort: 'nav_order' %}
-          {% for p in sorted_pages %}
-            {% if p.nav and p.autogen == null %}
+          {% if is_zh_page %}
+            <li class="nav-item {% if page.url contains '/zh/cv/' %}active{% endif %}">
+              <a class="nav-link" href="{{ '/zh/cv/' | relative_url }}">
+                简历
+                {% if page.url contains '/zh/cv/' %}
+                  <span class="sr-only">(current)</span>
+                {% endif %}
+              </a>
+            </li>
+          {% else %}
+            {% assign sorted_pages = site.pages | sort: 'nav_order' %}
+            {% for p in sorted_pages %}
+              {% if p.nav and p.autogen == null %}
               {% if p.dropdown %}
                 {% assign has_active_child = false %}
                 {% for child in p.children %}
@@ -106,8 +127,32 @@
                   </a>
                 </li>
               {% endif %}
-            {% endif %}
-          {% endfor %}
+              {% endif %}
+            {% endfor %}
+          {% endif %}
+          {% if page.language_switch %}
+            <li class="nav-item language-nav-item">
+              <span class="nav-link site-language-switch navbar-language-switch">
+                {% for language in page.language_switch %}
+                  <a class="{% if language.active %}active{% endif %}" href="{{ language.url | relative_url }}">{{ language.label }}</a>
+                {% endfor %}
+              </span>
+            </li>
+          {% elsif is_zh_page %}
+            <li class="nav-item language-nav-item">
+              <span class="nav-link site-language-switch navbar-language-switch">
+                <a href="{{ '/' | relative_url }}">English</a>
+                <a class="active" href="{{ '/zh/' | relative_url }}">中文</a>
+              </span>
+            </li>
+          {% else %}
+            <li class="nav-item language-nav-item">
+              <span class="nav-link site-language-switch navbar-language-switch">
+                <a class="active" href="{{ '/' | relative_url }}">English</a>
+                <a href="{{ '/zh/' | relative_url }}">中文</a>
+              </span>
+            </li>
+          {% endif %}
           {% if site.search_enabled %}
             <!-- Search -->
             <li class="nav-item">

@@ -18,6 +18,11 @@ body {
   }
 }
 
+:lang(zh-CN),
+:lang(zh) {
+  font-family: "LXGW WenKai Screen", "LXGW WenKai", "Noto Serif CJK SC", "Source Han Serif SC", "Songti SC", "Microsoft YaHei", sans-serif;
+}
+
 body.fixed-top-nav {
   // Add some padding for the nav-bar.
   padding-top: 56px;

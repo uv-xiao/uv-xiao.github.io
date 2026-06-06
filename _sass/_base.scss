@@ -295,8 +295,47 @@ ul.task-list input[type="checkbox"] {
   background-color: var(--global-bg-color);
   opacity: 0.95;
   a{
-    font-family: "Indie Flower";
+    font-family: "Indie Flower", "LXGW WenKai Screen", "LXGW WenKai", "Noto Serif CJK SC", sans-serif;
   }
+}
+
+.site-language-switch {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  align-items: center;
+  margin-top: 0.25rem;
+
+  a {
+    border: 1px solid var(--global-divider-color);
+    border-radius: 0.25rem;
+    color: var(--global-text-color);
+    font-size: 0.78rem;
+    line-height: 1;
+    padding: 0.28rem 0.55rem;
+    text-decoration: none;
+
+    &:hover,
+    &.active {
+      border-color: var(--global-theme-color);
+      color: var(--global-theme-color);
+      text-decoration: none;
+    }
+  }
+}
+
+.post-header .site-language-switch {
+  margin-bottom: 0.6rem;
+}
+
+.navbar-language-switch {
+  margin-top: 0;
+  padding-top: 0.4rem !important;
+  padding-bottom: 0.4rem !important;
+}
+
+.navbar .site-language-switch a {
+  font-family: 'Share Tech', "LXGW WenKai Screen", "Noto Serif CJK SC", sans-serif;
 }
 
 .navbar .dropdown-menu {

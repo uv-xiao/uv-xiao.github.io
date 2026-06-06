@@ -7,6 +7,12 @@ nav: false
 cv_pdf: CV_zh.pdf
 cv_data: cv_zh
 lang: zh-CN
+language_switch:
+  - label: English
+    url: /cv/
+  - label: 中文
+    url: /zh/cv/
+    active: true
 cv_languages:
   - label: English
     url: /cv/

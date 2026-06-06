@@ -3,6 +3,14 @@ layout: about
 title: About
 permalink: /
 subtitle:
+lang: en
+nav: false
+language_switch:
+  - label: English
+    url: /
+    active: true
+  - label: 中文
+    url: /zh/
 
 profile:
   align: right
