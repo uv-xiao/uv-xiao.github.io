@@ -72,8 +72,9 @@
           summary_lines:
             - "LLMs improve compiler/co-design"
             - "workflows and new-chip"
-            - "kernel development; compiler/runtime"
-            - "systems support LLM workloads."
+            - "kernel development;"
+            - "compiler/runtime systems"
+            - "support LLM workloads."
           works:
             - { name: EggMind, tag: "arXiv", link: "https://arxiv.org/abs/2604.17364" }
             - { name: IntelliC, tag: "GitHub", link: "https://github.com/uv-xiao/IntelliC" }
