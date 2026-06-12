@@ -17,20 +17,30 @@
       year: 2022 - 至今
       description:
         - "导师：梁云教授"
-        - "研究方向：围绕敏捷芯片设计与编译优化的软硬件协同"
+        - "研究方向：围绕敏捷芯片设计与编译优化的软硬件协同，以及面向新芯片算子开发的创新智能体"
     - title: 计算机科学与技术理学学士
       institution: 北京大学信息科学技术学院
       location: 中国北京
       year: 2018 - 2022
 
+- title: 工作经历
+  type: time_table
+  contents:
+    - title: 大语言模型算法实习生
+      institution: ByteDance Seed
+      location: 中国北京
+      year: 2026 - 至今
+      description:
+        - "构建面向新芯片算子开发的创新智能体。"
+
 - title: 研究方向
   type: research_story
   contents:
     paragraphs:
-      - "我的研究围绕敏捷芯片设计与编译优化的软硬件协同展开。核心问题是：如何把真实软件需求转化为可复用的体系结构能力，将其实现为高质量硬件，并通过可分析、可验证、可复用的编译接口重新暴露给软件栈。"
+      - "我的研究围绕敏捷芯片设计与编译优化的软硬件协同展开，并进一步探索面向新芯片算子开发的创新智能体。核心问题是：如何把真实软件需求转化为可复用的体系结构能力，将其实现为高质量硬件，并通过可分析、可验证、可复用的编译接口和智能体流程重新暴露给软件栈。"
       - "<strong>架构定制。</strong> 我探索使用编译技术和形式化方法，特别是 e-graph 技术，自动化 ISA 定制和编译器适配。ISAMORE (<a href='https://doi.org/10.1145/3779212.3790162'>DOI</a>) 通过对等价程序片段进行反一化来发现可复用自定义指令。Cayman (<a href='https://doi.org/10.1109/DAC63849.2025.11132875'>DOI</a>) 从完整应用中发现加速器机会，并同时优化控制流和数据访问。APS (<a href='https://doi.org/10.1109/ICCAD66269.2025.11240817'>DOI</a>, <a href='https://github.com/pku-liang/APS'>GitHub</a>) 和 Aquas (<a href='https://arxiv.org/abs/2511.22267'>preprint</a>) 将定制硬件能力连接到可重定向的编译器支持。"
       - "<strong>硬件综合。</strong> 我在多个抽象层次创建中间表示，并提出综合优化 pass，用于优化时序、微架构、映射和调度。Hector (<a href='https://doi.org/10.1145/3508352.3549370'>DOI</a>, <a href='https://github.com/pku-liang/Hector'>GitHub</a>) 为硬件综合方法提供多层 MLIR 基础设施。Cement (<a href='https://doi.org/10.1145/3626202.3637561'>DOI</a>) 和 Cement2 (<a href='https://arxiv.org/abs/2511.15073'>preprint</a>) 将周期时序和时间事务提升为 FPGA 设计的一等抽象。Clay (<a href='https://doi.org/10.1109/ICCAD66269.2025.11240669'>DOI</a>) 综合微架构感知的 ASIP 指令，SkyEgg (<a href='https://arxiv.org/abs/2511.15323'>preprint</a>) 使用 e-graph 联合进行实现选择与调度。"
-      - "<strong>大模型技术。</strong> 我同时探索大模型用于编译器，以及编译器/系统技术支撑大模型。EggMind (<a href='https://arxiv.org/abs/2604.17364'>preprint</a>) 使用大模型综合可复用的等式饱和策略。IntelliC (<a href='https://github.com/uv-xiao/IntelliC'>GitHub</a>) 研究面向人与智能体协作的可检查编译表示。Spine 研究验证有界的智能体协同设计，用类型化语义边界和可执行检查，将设计意图、架构描述、硬件/编译器产物和验证反馈连接成可追踪闭环。PTO Runtime (<a href='https://github.com/hw-native-sys/simpler'>GitHub</a>) 面向昇腾芯片和灵衢超节点执行编译后的任务图，用于分布式推理服务。Hive (<a href='https://arxiv.org/abs/2604.17353'>preprint</a>) 将系统视角扩展到多智能体推理基础设施。"
+      - "<strong>大模型技术。</strong> 我同时探索大模型用于编译器，以及编译器/系统技术支撑大模型，并构建面向新芯片算子开发的创新智能体。EggMind (<a href='https://arxiv.org/abs/2604.17364'>preprint</a>) 使用大模型综合可复用的等式饱和策略。IntelliC (<a href='https://github.com/uv-xiao/IntelliC'>GitHub</a>) 研究面向人与智能体协作的可检查编译表示。Spine 研究验证有界的智能体协同设计，用类型化语义边界和可执行检查，将设计意图、架构描述、硬件/编译器产物和验证反馈连接成可追踪闭环。PTO Runtime (<a href='https://github.com/hw-native-sys/simpler'>GitHub</a>) 面向昇腾芯片和灵衢超节点执行编译后的任务图，用于分布式推理服务。Hive (<a href='https://arxiv.org/abs/2604.17353'>preprint</a>) 将系统视角扩展到多智能体推理基础设施。"
       - "这一闭环的逻辑是：架构定制暴露可复用硬件能力，硬件综合将其转化为高效实现，而大模型时代的技术推进既有编译和协同设计工具链，并提供持续演化的能力，使该闭环真正变得可实践、可自我改进。"
     diagram:
       classes:
@@ -57,22 +67,24 @@
             - { name: Clay, tag: "ICCAD '25", link: "https://doi.org/10.1109/ICCAD66269.2025.11240669" }
             - { name: SkyEgg, tag: "arXiv", link: "https://arxiv.org/abs/2511.15323" }
         - title: 大模型技术
-          summary: "大模型推进编译/协同设计流程；编译器和运行时系统支撑大模型负载。"
+          summary: "大模型推进编译/协同设计流程和新芯片算子开发；编译器和运行时系统支撑大模型负载。"
           summary_lines:
             - "大模型推进编译与"
-            - "协同设计流程；"
+            - "协同设计流程和"
+            - "新芯片算子开发；"
             - "编译器和运行时"
             - "支撑大模型负载。"
           works:
             - { name: EggMind, tag: "arXiv", link: "https://arxiv.org/abs/2604.17364" }
             - { name: IntelliC, tag: "GitHub", link: "https://github.com/uv-xiao/IntelliC" }
             - { name: Spine, tag: "", link: "" }
+            - { name: Kernel Agents, tag: "新芯片", link: "" }
             - { name: PTO Runtime, tag: "GitHub", link: "https://github.com/hw-native-sys/simpler" }
             - { name: Hive, tag: "arXiv", link: "https://arxiv.org/abs/2604.17353" }
       relationships:
         - { from: 架构定制, to: 硬件综合, label: "定制能力转化为实现", label_lines: ["定制能力", "转化为实现"] }
         - { from: 硬件综合, to: 架构定制, label: "硬件约束指导定制", label_lines: ["硬件约束", "指导定制"] }
-        - { from: 硬件综合, to: 大模型技术, label: "IR/运行时证据约束智能体", label_lines: ["IR/运行时证据", "约束智能体"] }
+        - { from: 硬件综合, to: 大模型技术, label: "IR/运行时/算子证据约束智能体", label_lines: ["IR/运行时/算子证据", "约束智能体"] }
         - { from: 大模型技术, to: 架构定制, label: "智能体流程演化定制方法", label_lines: ["智能体流程", "演化定制方法"] }
         - { from: 大模型技术, to: 硬件综合, label: "智能体改进综合工具链", label_lines: ["智能体改进", "综合工具链"] }
 
