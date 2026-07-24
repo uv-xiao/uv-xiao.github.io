@@ -140,6 +140,24 @@ svg.research-diagram-svg a {
   stroke-width: 1.4;
 }
 
+.research-svg-center rect {
+  fill: rgba(0, 123, 255, 0.12);
+  stroke: var(--global-theme-color);
+  stroke-width: 1.8;
+}
+
+.research-svg-outcome rect {
+  fill: rgba(0, 140, 115, 0.08);
+  stroke: #008c73;
+  stroke-width: 1.4;
+}
+
+.research-svg-foundation rect {
+  fill: rgba(0, 123, 255, 0.04);
+  stroke: var(--global-divider-color);
+  stroke-width: 1.2;
+}
+
 .research-svg-title {
   fill: var(--global-theme-color);
   font-size: 20px;
@@ -159,6 +177,12 @@ svg.research-diagram-svg a {
 }
 
 .research-svg-work-name {
+  font-weight: 700;
+}
+
+.research-svg-foundation-title {
+  fill: var(--global-theme-color);
+  font-size: 15px;
   font-weight: 700;
 }
 

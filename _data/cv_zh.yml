@@ -17,7 +17,7 @@
       year: 2022 - 至今
       description:
         - "导师：梁云教授"
-        - "研究方向：围绕敏捷芯片设计与编译优化的软硬件协同，以及面向新芯片算子开发的创新智能体"
+        - "研究方向：面向新型 AI 芯片的大模型智能体基础设施，以编译器、运行时与软硬件协同设计为技术基础"
     - title: 计算机科学与技术理学学士
       institution: 北京大学信息科学技术学院
       location: 中国北京
@@ -31,62 +31,60 @@
       location: 中国北京
       year: 2026 - 至今
       description:
-        - "构建面向新芯片算子开发的创新智能体。"
+        - "构建面向新型 AI 芯片上大模型系统的智能体基础设施，覆盖算子功能实现、芯片架构感知性能优化与工具链自动开发。"
+        - "设计面向新芯片的大模型服务优化智能体流程，将算子研发、编译器/运行时约束与硬件感知优化连接起来。"
+        - "沉淀真实系统任务中的智能体开发数据与 trajectory，将基础设施研发过程转化为增强 coding 与系统智能体能力的训练信号。"
 
 - title: 研究方向
   type: research_story
   contents:
     paragraphs:
-      - "我的研究围绕敏捷芯片设计与编译优化的软硬件协同展开，并进一步探索面向新芯片算子开发的创新智能体。核心问题是：如何把真实软件需求转化为可复用的体系结构能力，将其实现为高质量硬件，并通过可分析、可验证、可复用的编译接口和智能体流程重新暴露给软件栈。"
-      - "<strong>架构定制。</strong> 我探索使用编译技术和形式化方法，特别是 e-graph 技术，自动化 ISA 定制和编译器适配。ISAMORE (<a href='https://doi.org/10.1145/3779212.3790162'>DOI</a>) 通过对等价程序片段进行反一化来发现可复用自定义指令。Cayman (<a href='https://doi.org/10.1109/DAC63849.2025.11132875'>DOI</a>) 从完整应用中发现加速器机会，并同时优化控制流和数据访问。APS (<a href='https://doi.org/10.1109/ICCAD66269.2025.11240817'>DOI</a>, <a href='https://github.com/pku-liang/APS'>GitHub</a>) 和 Aquas (<a href='https://arxiv.org/abs/2511.22267'>preprint</a>) 将定制硬件能力连接到可重定向的编译器支持。"
-      - "<strong>硬件综合。</strong> 我在多个抽象层次创建中间表示，并提出综合优化 pass，用于优化时序、微架构、映射和调度。Hector (<a href='https://doi.org/10.1145/3508352.3549370'>DOI</a>, <a href='https://github.com/pku-liang/Hector'>GitHub</a>) 为硬件综合方法提供多层 MLIR 基础设施。Cement (<a href='https://doi.org/10.1145/3626202.3637561'>DOI</a>) 和 Cement2 (<a href='https://arxiv.org/abs/2511.15073'>preprint</a>) 将周期时序和时间事务提升为 FPGA 设计的一等抽象。Clay (<a href='https://doi.org/10.1109/ICCAD66269.2025.11240669'>DOI</a>) 综合微架构感知的 ASIP 指令，SkyEgg (<a href='https://arxiv.org/abs/2511.15323'>preprint</a>) 使用 e-graph 联合进行实现选择与调度。"
-      - "<strong>大模型技术。</strong> 我同时探索大模型用于编译器，以及编译器/系统技术支撑大模型，并构建面向新芯片算子开发的创新智能体。EggMind (<a href='https://arxiv.org/abs/2604.17364'>preprint</a>) 使用大模型综合可复用的等式饱和策略。IntelliC (<a href='https://github.com/uv-xiao/IntelliC'>GitHub</a>) 研究面向人与智能体协作的可检查编译表示。Spine 研究验证有界的智能体协同设计，用类型化语义边界和可执行检查，将设计意图、架构描述、硬件/编译器产物和验证反馈连接成可追踪闭环。PTO Runtime (<a href='https://github.com/hw-native-sys/simpler'>GitHub</a>) 面向昇腾芯片和灵衢超节点执行编译后的任务图，用于分布式推理服务。Hive (<a href='https://arxiv.org/abs/2604.17353'>preprint</a>) 将系统视角扩展到多智能体推理基础设施。"
-      - "这一闭环的逻辑是：架构定制暴露可复用硬件能力，硬件综合将其转化为高效实现，而大模型时代的技术推进既有编译和协同设计工具链，并提供持续演化的能力，使该闭环真正变得可实践、可自我改进。"
+      - "我当前的研究聚焦面向新型 AI 芯片上大模型系统的智能体基础设施，研究智能体如何完成算子功能实现、芯片架构感知性能优化与工具链自动开发。这一方向从两个维度驱动大模型系统：一方面提升新芯片上的模型服务效率，另一方面沉淀开发数据与 trajectory，增强后续 coding 与系统智能体能力。"
+      - "<strong>大模型智能体基础设施。</strong> 我当前的工作围绕新芯片上大模型基础设施的真实生命周期构建智能体：算子功能实现、架构感知性能优化与工具链自动开发。核心系统问题是：智能体流程如何连接软件意图、编译器/运行时约束、芯片特定优化机会，以及可复用的开发 trajectory。"
+      - "<strong>编译器与运行时底座。</strong> 既有系统工作提供了智能体可操作的系统界面。IntelliC (<a href='https://github.com/uv-xiao/IntelliC'>GitHub</a>) 研究面向人与智能体协作的可检查编译表示。PTO Runtime (<a href='https://github.com/hw-native-sys/simpler'>GitHub</a>) 面向 Ascend 芯片和灵衢 SuperPod 执行编译后的任务图。Hive (<a href='https://arxiv.org/abs/2604.17353'>preprint</a>) 将多智能体大模型负载暴露给推理基础设施，Spine 研究跨设计意图、架构、编译器、硬件与执行证据的有界智能体协同设计。"
+      - "<strong>软硬件协同基础。</strong> 我此前在编译器、e-graph、硬件综合与架构定制上的论文构成了当前智能体方向的技术基础。ISAMORE (<a href='https://doi.org/10.1145/3779212.3790162'>DOI</a>) 和 EggMind (<a href='https://arxiv.org/abs/2604.17364'>preprint</a>) 展示了形式化搜索与大模型引导搜索如何组织优化过程。Hector (<a href='https://doi.org/10.1145/3508352.3549370'>DOI</a>)、Cement (<a href='https://doi.org/10.1145/3626202.3637561'>DOI</a>)、Clay (<a href='https://doi.org/10.1109/ICCAD66269.2025.11240669'>DOI</a>)、Cayman (<a href='https://doi.org/10.1109/DAC63849.2025.11132875'>DOI</a>)、APS (<a href='https://doi.org/10.1109/ICCAD66269.2025.11240817'>DOI</a>, <a href='https://github.com/pku-liang/APS'>GitHub</a>)、Aquas (<a href='https://arxiv.org/abs/2511.22267'>preprint</a>) 与 SkyEgg (<a href='https://arxiv.org/abs/2511.15323'>preprint</a>) 提供了 IR、综合、运行时与协同设计方法，使智能体决策落在真实系统产物上。"
     diagram:
-      classes:
-        - title: 架构定制
-          summary: "编译与形式化方法，特别是 e-graph，自动化 ISA 定制和编译器适配。"
+      title_lines:
+        - "面向新型 AI 芯片的"
+        - "大模型智能体基础设施"
+      capabilities:
+        - title: 算子功能实现
           summary_lines:
-            - "编译与形式化方法，"
-            - "特别是 e-graph，自动化"
-            - "ISA 定制和"
-            - "编译器适配。"
-          works:
-            - { name: ISAMORE, tag: "ASPLOS '26", link: "https://doi.org/10.1145/3779212.3790162" }
-            - { name: Cayman, tag: "DAC '25", link: "https://doi.org/10.1109/DAC63849.2025.11132875" }
-            - { name: APS / Aquas, tag: "ICCAD '25 + arXiv", link: "https://arxiv.org/abs/2511.22267" }
-        - title: 硬件综合
-          summary: "多层 IR 和综合 pass 优化时序、微架构、映射与调度。"
+            - "智能体为大模型负载"
+            - "生成可运行算子，"
+            - "面向新芯片后端落地。"
+        - title: 架构感知优化
           summary_lines:
-            - "多层 IR 和综合 pass"
-            - "优化时序、微架构、"
-            - "映射与调度。"
-          works:
-            - { name: Hector, tag: "ICCAD '22", link: "https://doi.org/10.1145/3508352.3549370" }
-            - { name: Cement / Cement2, tag: "FPGA '24 + arXiv", link: "https://arxiv.org/abs/2511.15073" }
-            - { name: Clay, tag: "ICCAD '25", link: "https://doi.org/10.1109/ICCAD66269.2025.11240669" }
-            - { name: SkyEgg, tag: "arXiv", link: "https://arxiv.org/abs/2511.15323" }
-        - title: 大模型技术
-          summary: "大模型推进编译/协同设计流程和新芯片算子开发；编译器和运行时系统支撑大模型负载。"
+            - "智能体结合芯片架构、"
+            - "编译器和运行时约束"
+            - "进行性能优化。"
+        - title: 工具链自动开发
           summary_lines:
-            - "大模型推进编译与"
-            - "协同设计流程和"
-            - "新芯片算子开发；"
-            - "编译器和运行时"
-            - "支撑大模型负载。"
-          works:
-            - { name: EggMind, tag: "arXiv", link: "https://arxiv.org/abs/2604.17364" }
-            - { name: IntelliC, tag: "GitHub", link: "https://github.com/uv-xiao/IntelliC" }
-            - { name: Spine, tag: "", link: "" }
-            - { name: Kernel Agents, tag: "新芯片", link: "" }
-            - { name: PTO Runtime, tag: "GitHub", link: "https://github.com/hw-native-sys/simpler" }
-            - { name: Hive, tag: "arXiv", link: "https://arxiv.org/abs/2604.17353" }
-      relationships:
-        - { from: 架构定制, to: 硬件综合, label: "定制能力转化为实现", label_lines: ["定制能力", "转化为实现"] }
-        - { from: 硬件综合, to: 架构定制, label: "硬件约束指导定制", label_lines: ["硬件约束", "指导定制"] }
-        - { from: 硬件综合, to: 大模型技术, label: "IR/运行时/算子证据约束智能体", label_lines: ["IR/运行时/算子证据", "约束智能体"] }
-        - { from: 大模型技术, to: 架构定制, label: "智能体流程演化定制方法", label_lines: ["智能体流程", "演化定制方法"] }
-        - { from: 大模型技术, to: 硬件综合, label: "智能体改进综合工具链", label_lines: ["智能体改进", "综合工具链"] }
+            - "智能体开发和修复"
+            - "编译器、运行时与"
+            - "工具链产物。"
+      outcomes:
+        - title: 模型服务效率
+          summary_lines:
+            - "更好的算子和运行时路径"
+            - "让新芯片更高效服务大模型。"
+        - title: 模型能力增强
+          summary_lines:
+            - "开发 trajectory 转化为"
+            - "coding 与系统智能体训练信号。"
+      foundation_title: "来自既有系统与论文的技术基础"
+      foundations:
+        - title: "编译器 / 形式化搜索"
+          work_rows:
+            - [{ name: ISAMORE, link: "https://doi.org/10.1145/3779212.3790162" }, { name: EggMind, link: "https://arxiv.org/abs/2604.17364" }]
+        - title: "IR / 协同设计接口"
+          work_rows:
+            - [{ name: Hector, link: "https://doi.org/10.1145/3508352.3549370" }, { name: APS, link: "https://doi.org/10.1109/ICCAD66269.2025.11240817" }, { name: Aquas, link: "https://arxiv.org/abs/2511.22267" }]
+            - [{ name: IntelliC, link: "https://github.com/uv-xiao/IntelliC" }, { name: Spine, link: "" }]
+        - title: "硬件 / 运行时系统"
+          work_rows:
+            - [{ name: Cement, link: "https://doi.org/10.1145/3626202.3637561" }, { name: Clay, link: "https://doi.org/10.1109/ICCAD66269.2025.11240669" }, { name: SkyEgg, link: "https://arxiv.org/abs/2511.15323" }]
+            - [{ name: Cayman, link: "https://doi.org/10.1109/DAC63849.2025.11132875" }, { name: PTO Runtime, link: "https://github.com/hw-native-sys/simpler" }, { name: Hive, link: "https://arxiv.org/abs/2604.17353" }]
 
 - title: 代表性论文
   type: time_table
