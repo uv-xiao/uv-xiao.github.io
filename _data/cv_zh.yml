@@ -17,7 +17,7 @@
       year: 2022 - 至今
       description:
         - "导师：梁云教授"
-        - "研究方向：面向新型 AI 芯片的大模型智能体基础设施，以编译器、运行时与软硬件协同设计为技术基础"
+        - "研究方向：面向新型 AI 芯片大模型基础设施的智能体，以编译器驱动的敏捷芯片软硬件协同设计为技术基础"
     - title: 计算机科学与技术理学学士
       institution: 北京大学信息科学技术学院
       location: 中国北京
@@ -31,60 +31,77 @@
       location: 中国北京
       year: 2026 - 至今
       description:
-        - "构建面向新型 AI 芯片上大模型系统的智能体基础设施，覆盖算子功能实现、芯片架构感知性能优化与工具链自动开发。"
-        - "设计面向新芯片的大模型服务优化智能体流程，将算子研发、编译器/运行时约束与硬件感知优化连接起来。"
+        - "参与原生多智能体 coding agent 系统研发，聚焦多智能体编排策略与工作流定制，并以程序化并发和 human-in-the-loop 工作流支撑长程系统研发。"
+        - "将这些方法用于 LLM 基础设施：演进抽象分层的算子优化 skill 系统，并构建面向新型 AI 芯片的 agent 原生编译体系。"
         - "沉淀真实系统任务中的智能体开发数据与 trajectory，将基础设施研发过程转化为增强 coding 与系统智能体能力的训练信号。"
 
 - title: 研究方向
   type: research_story
   contents:
     paragraphs:
-      - "我当前的研究聚焦面向新型 AI 芯片上大模型系统的智能体基础设施，研究智能体如何完成算子功能实现、芯片架构感知性能优化与工具链自动开发。这一方向从两个维度驱动大模型系统：一方面提升新芯片上的模型服务效率，另一方面沉淀开发数据与 trajectory，增强后续 coding 与系统智能体能力。"
-      - "<strong>大模型智能体基础设施。</strong> 我当前的工作围绕新芯片上大模型基础设施的真实生命周期构建智能体：算子功能实现、架构感知性能优化与工具链自动开发。核心系统问题是：智能体流程如何连接软件意图、编译器/运行时约束、芯片特定优化机会，以及可复用的开发 trajectory。"
-      - "<strong>编译器与运行时底座。</strong> 既有系统工作提供了智能体可操作的系统界面。IntelliC (<a href='https://github.com/uv-xiao/IntelliC'>GitHub</a>) 研究面向人与智能体协作的可检查编译表示。PTO Runtime (<a href='https://github.com/hw-native-sys/simpler'>GitHub</a>) 面向 Ascend 芯片和灵衢 SuperPod 执行编译后的任务图。Hive (<a href='https://arxiv.org/abs/2604.17353'>preprint</a>) 将多智能体大模型负载暴露给推理基础设施，Spine 研究跨设计意图、架构、编译器、硬件与执行证据的有界智能体协同设计。"
-      - "<strong>软硬件协同基础。</strong> 我此前在编译器、e-graph、硬件综合与架构定制上的论文构成了当前智能体方向的技术基础。ISAMORE (<a href='https://doi.org/10.1145/3779212.3790162'>DOI</a>) 和 EggMind (<a href='https://arxiv.org/abs/2604.17364'>preprint</a>) 展示了形式化搜索与大模型引导搜索如何组织优化过程。Hector (<a href='https://doi.org/10.1145/3508352.3549370'>DOI</a>)、Cement (<a href='https://doi.org/10.1145/3626202.3637561'>DOI</a>)、Clay (<a href='https://doi.org/10.1109/ICCAD66269.2025.11240669'>DOI</a>)、Cayman (<a href='https://doi.org/10.1109/DAC63849.2025.11132875'>DOI</a>)、APS (<a href='https://doi.org/10.1109/ICCAD66269.2025.11240817'>DOI</a>, <a href='https://github.com/pku-liang/APS'>GitHub</a>)、Aquas (<a href='https://arxiv.org/abs/2511.22267'>preprint</a>) 与 SkyEgg (<a href='https://arxiv.org/abs/2511.15323'>preprint</a>) 提供了 IR、综合、运行时与协同设计方法，使智能体决策落在真实系统产物上。"
+      - "<strong>面向 LLM 基础设施的智能体。</strong> 我当前的研究聚焦于新型 AI 芯片上的 LLM 基础设施智能体：演进抽象分层的算子优化 skill 系统与 agent 原生编译体系，贯通算子实现、芯片架构感知性能优化与工具链自动开发；由此提升模型服务效率，并将真实研发 trajectory 转化为增强 coding 与系统智能体能力的训练数据。"
+      - "<strong>原生多智能体 coding agent 系统。</strong> 我参与长程系统研发所需的多智能体编排策略与工作流定制，采用程序化并发与 human-in-the-loop 工作流。"
+      - "<strong>编译器与运行时底座。</strong> 既有系统工作提供了智能体可操作的系统界面。IntelliC (<a href='https://github.com/uv-xiao/IntelliC'>GitHub</a>) 研究面向人与智能体协作的可检查编译表示。PTO Runtime (<a href='https://github.com/hw-native-sys/simpler'>GitHub</a>) 面向 Ascend 芯片和灵衢 SuperPod 执行编译后的任务图。Hive (<a href='https://arxiv.org/abs/2604.17353'>preprint</a>) 将多智能体大模型负载暴露给推理基础设施，Spine (<a href='https://github.com/arch-of-shadow/spine'>GitHub</a>) 研究跨设计意图、架构、编译器、硬件与执行证据的有界智能体协同设计。"
+      - "<strong>编译器驱动的敏捷芯片设计。</strong> 我此前以编译器为组织架构定制与软硬件协同设计的核心。Hector (<a href='https://doi.org/10.1145/3508352.3549370'>DOI</a>, <a href='https://github.com/pku-liang/Hector'>GitHub</a>) 提供面向硬件综合的多层次 IR；Cement (<a href='https://doi.org/10.1145/3626202.3637561'>DOI</a>) 将周期确定的 CmtHDL 领域专用语言与具备时序分析、控制综合能力的 CmtC 编译栈结合；APS (<a href='https://doi.org/10.1109/ICCAD66269.2025.11240817'>DOI</a>, <a href='https://github.com/pku-liang/APS'>GitHub</a>) 构建从架构 DSL 到硬件综合和软件编译的开源 MLIR 栈，Aquas (<a href='https://arxiv.org/abs/2511.22267'>preprint</a>) 进一步加入面向领域的访存/综合指令与基于 e-graph 的可重定向编译器。Clay (<a href='https://doi.org/10.1109/ICCAD66269.2025.11240669'>DOI</a>)、Cayman (<a href='https://doi.org/10.1109/DAC63849.2025.11132875'>DOI</a>) 与 SkyEgg (<a href='https://arxiv.org/abs/2511.15323'>preprint</a>) 自动化微架构与加速器优化，ISAMORE (<a href='https://doi.org/10.1145/3779212.3790162'>DOI</a>) 和 EggMind (<a href='https://arxiv.org/abs/2604.17364'>preprint</a>) 则以形式化方法和大模型引导方法组织编译搜索。"
     diagram:
-      title_lines:
-        - "面向新型 AI 芯片的"
-        - "大模型智能体基础设施"
-      capabilities:
-        - title: 算子功能实现
-          summary_lines:
-            - "智能体为大模型负载"
-            - "生成可运行算子，"
-            - "面向新芯片后端落地。"
-        - title: 架构感知优化
-          summary_lines:
-            - "智能体结合芯片架构、"
-            - "编译器和运行时约束"
-            - "进行性能优化。"
-        - title: 工具链自动开发
-          summary_lines:
-            - "智能体开发和修复"
-            - "编译器、运行时与"
-            - "工具链产物。"
+      current_title: "当前方向：面向新型 AI 芯片 LLM 基础设施的智能体"
+      agent:
+        title: "原生多智能体架构"
+        summary_lines:
+          - "程序化并发模型"
+          - "human-in-the-loop 工作流"
+          - "编排策略与工作流定制"
+      workflow:
+        title: "LLM 基础设施研发"
+        summary_lines:
+          - "分层算子优化 skill 系统演进"
+          - "agent 原生编译体系构建"
+          - "芯片架构感知性能优化"
       outcomes:
         - title: 模型服务效率
           summary_lines:
-            - "更好的算子和运行时路径"
-            - "让新芯片更高效服务大模型。"
-        - title: 模型能力增强
+            - "让新型 AI 芯片更高效地"
+            - "服务大模型负载。"
+        - title: 开发数据与 trajectory
           summary_lines:
-            - "开发 trajectory 转化为"
-            - "coding 与系统智能体训练信号。"
-      foundation_title: "来自既有系统与论文的技术基础"
+            - "将真实系统研发过程转化为"
+            - "模型训练数据，持续增强"
+            - "coding / 系统智能体能力。"
+      relations:
+        coordinate: "落地应用"
+        serve: "提升服务"
+        record: "沉淀轨迹"
+        feedback: "训练更强智能体"
+        artifacts: "结构化产物"
+        methods: "优化方法"
+        execution: "执行反馈"
+      foundation_title: "编译器驱动的敏捷芯片设计基础"
+      foundation_subtitle: "表达设计意图  ->  优化软硬件实现  ->  执行并获得反馈"
       foundations:
-        - title: "编译器 / 形式化搜索"
+        - title: "领域专用语言与编译栈"
+          summary_lines:
+            - "以 DSL 和多层次 IR 表达软硬件意图，"
+            - "通过编译与综合 passes"
+            - "逐层降级为可执行设计。"
           work_rows:
-            - [{ name: ISAMORE, link: "https://doi.org/10.1145/3779212.3790162" }, { name: EggMind, link: "https://arxiv.org/abs/2604.17364" }]
-        - title: "IR / 协同设计接口"
+            - [{ name: Hector, link: "https://doi.org/10.1145/3508352.3549370" }, { name: Cement, link: "https://doi.org/10.1145/3626202.3637561" }]
+            - [{ name: APS, link: "https://doi.org/10.1109/ICCAD66269.2025.11240817" }, { name: Aquas, link: "https://arxiv.org/abs/2511.22267" }]
+        - title: "架构定制与硬件综合优化"
+          summary_lines:
+            - "以形式化方法、e-graph 与编译搜索"
+            - "自动完成 ISA、微架构"
+            - "及加速器实现优化。"
           work_rows:
-            - [{ name: Hector, link: "https://doi.org/10.1145/3508352.3549370" }, { name: APS, link: "https://doi.org/10.1109/ICCAD66269.2025.11240817" }, { name: Aquas, link: "https://arxiv.org/abs/2511.22267" }]
-            - [{ name: IntelliC, link: "https://github.com/uv-xiao/IntelliC" }, { name: Spine, link: "" }]
-        - title: "硬件 / 运行时系统"
+            - [{ name: ISAMORE, link: "https://doi.org/10.1145/3779212.3790162" }, { name: Clay, link: "https://doi.org/10.1109/ICCAD66269.2025.11240669" }, { name: Cayman, link: "https://doi.org/10.1109/DAC63849.2025.11132875" }]
+            - [{ name: SkyEgg, link: "https://arxiv.org/abs/2511.15323" }, { name: EggMind, link: "https://arxiv.org/abs/2604.17364" }]
+        - title: "执行与协同设计系统"
+          summary_lines:
+            - "以可检查产物、任务图和运行时反馈"
+            - "连接设计意图、编译结果"
+            - "与真实系统执行。"
           work_rows:
-            - [{ name: Cement, link: "https://doi.org/10.1145/3626202.3637561" }, { name: Clay, link: "https://doi.org/10.1109/ICCAD66269.2025.11240669" }, { name: SkyEgg, link: "https://arxiv.org/abs/2511.15323" }]
-            - [{ name: Cayman, link: "https://doi.org/10.1109/DAC63849.2025.11132875" }, { name: PTO Runtime, link: "https://github.com/hw-native-sys/simpler" }, { name: Hive, link: "https://arxiv.org/abs/2604.17353" }]
+            - [{ name: IntelliC, link: "https://github.com/uv-xiao/IntelliC" }, { name: PTO Runtime, link: "https://github.com/hw-native-sys/simpler" }]
+            - [{ name: Hive, link: "https://arxiv.org/abs/2604.17353" }, { name: Spine, link: "https://github.com/arch-of-shadow/spine" }]
 
 - title: 代表性论文
   type: time_table

@@ -152,10 +152,21 @@ svg.research-diagram-svg a {
   stroke-width: 1.4;
 }
 
-.research-svg-foundation rect {
+.research-svg-outcome .research-svg-body {
+  font-size: 16px;
+}
+
+.research-svg-foundation-band rect {
   fill: rgba(0, 123, 255, 0.04);
   stroke: var(--global-divider-color);
   stroke-width: 1.2;
+}
+
+.research-svg-foundation-card rect {
+  fill: var(--global-bg-color);
+  stroke: var(--global-theme-color);
+  stroke-opacity: 0.55;
+  stroke-width: 1.25;
 }
 
 .research-svg-title {
@@ -173,7 +184,7 @@ svg.research-diagram-svg a {
 
 .research-svg-work {
   fill: var(--global-theme-color);
-  font-size: 15px;
+  font-size: 16px;
 }
 
 .research-svg-work-name {
@@ -182,8 +193,31 @@ svg.research-diagram-svg a {
 
 .research-svg-foundation-title {
   fill: var(--global-theme-color);
-  font-size: 15px;
+  font-size: 18px;
   font-weight: 700;
+  text-anchor: middle;
+}
+
+.research-svg-foundation-summary {
+  fill: var(--global-text-color);
+  font-size: 16px;
+}
+
+.research-svg-section-title {
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.research-svg-band-title {
+  font-size: 20px;
+  font-weight: 700;
+  text-anchor: middle;
+}
+
+.research-svg-band-subtitle {
+  fill: var(--global-text-color);
+  font-size: 15px;
+  text-anchor: middle;
 }
 
 .research-svg-connector {
@@ -191,6 +225,19 @@ svg.research-diagram-svg a {
   stroke-width: 2.6;
   stroke-linecap: round;
   stroke-linejoin: round;
+}
+
+.research-svg-bridge {
+  fill: none;
+  stroke-width: 2.1;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.research-svg-sequence {
+  fill: none;
+  stroke-width: 1.8;
+  stroke-linecap: round;
 }
 
 .research-svg-blue-stroke {
@@ -211,10 +258,11 @@ svg.research-diagram-svg a {
 
 .research-svg-label-bg {
   fill: var(--global-bg-color);
+  stroke: none;
 }
 
 .research-svg-label {
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 700;
   text-anchor: middle;
 }

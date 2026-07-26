@@ -17,7 +17,7 @@
       year: 2022 - Present
       description:
         - "Advisor: Prof. Yun Liang"
-        - "Research: agentic LLM infrastructure on emerging AI chips, grounded in compilers, runtimes, and hardware-software co-design"
+        - "Research: agents for LLM infrastructure on emerging AI chips, grounded in compiler-driven hardware-software co-design"
     - title: Bachelor of Science in Computer Science
       institution: School of EECS, Peking University
       location: Beijing, China
@@ -31,60 +31,76 @@
       location: Beijing, China
       year: 2026 - Present
       description:
-        - "Built agentic infrastructure for LLM systems on emerging AI chips, covering operator implementation, chip-architecture-aware performance optimization, and automated toolchain development."
-        - "Developed agent workflows that improve LLM serving efficiency on new chips by connecting operator development, compiler/runtime constraints, and hardware-aware optimization."
+        - "Contributed to native multi-agent coding systems, focusing on orchestration strategies and workflow customization with programmable concurrency and human-in-the-loop workflows."
+        - "Applied these approaches to LLM infrastructure by evolving an abstraction-layered operator-optimization skill system and an agent-native compiler stack for emerging AI chips."
         - "Curated agent development data and trajectories from real systems tasks, turning infrastructure work into training signals for stronger coding and systems agents."
 
 - title: Research
   type: research_story
   contents:
     paragraphs:
-      - "My current research focuses on agentic infrastructure for LLM systems on emerging AI chips. I study how agents can implement operators, optimize performance with chip-architecture awareness, and automate toolchain development. This agenda drives LLM systems from two sides: improving model-serving efficiency on new chips, and producing development data and trajectories that strengthen future coding and systems agents."
-      - "<strong>Agentic LLM infrastructure.</strong> My current work builds agents around the real lifecycle of LLM infrastructure on new chips: operator implementation, architecture-aware performance optimization, and toolchain auto-development. The key systems question is how agent workflows can connect software intent, compiler/runtime constraints, chip-specific optimization opportunities, and reusable development trajectories."
-      - "<strong>Compiler and runtime substrates.</strong> Earlier systems work provides the surfaces that agents can operate on. IntelliC (<a href='https://github.com/uv-xiao/IntelliC'>GitHub</a>) studies inspectable compiler representations for human-agent collaboration. PTO Runtime (<a href='https://github.com/hw-native-sys/simpler'>GitHub</a>) executes compiled task graphs for serving on Ascend chips and LingQu SuperPods. Hive (<a href='https://arxiv.org/abs/2604.17353'>preprint</a>) exposes multi-agent LLM workloads to inference infrastructure, while Spine studies bounded agentic co-design across design intent, architecture, compiler, hardware, and execution evidence."
-      - "<strong>Co-design foundations.</strong> My publications in compilers, e-graphs, hardware synthesis, and architecture customization form the technical base for the current agent agenda. ISAMORE (<a href='https://doi.org/10.1145/3779212.3790162'>DOI</a>) and EggMind (<a href='https://arxiv.org/abs/2604.17364'>preprint</a>) show how formal and LLM-guided search can structure optimization. Hector (<a href='https://doi.org/10.1145/3508352.3549370'>DOI</a>), Cement (<a href='https://doi.org/10.1145/3626202.3637561'>DOI</a>), Clay (<a href='https://doi.org/10.1109/ICCAD66269.2025.11240669'>DOI</a>), Cayman (<a href='https://doi.org/10.1109/DAC63849.2025.11132875'>DOI</a>), APS (<a href='https://doi.org/10.1109/ICCAD66269.2025.11240817'>DOI</a>, <a href='https://github.com/pku-liang/APS'>GitHub</a>), Aquas (<a href='https://arxiv.org/abs/2511.22267'>preprint</a>), and SkyEgg (<a href='https://arxiv.org/abs/2511.15323'>preprint</a>) provide IR, synthesis, runtime, and co-design methods that ground agent decisions in real systems artifacts."
+      - "<strong>Agentic LLM infrastructure.</strong> My current research centers on agents for LLM infrastructure on emerging AI chips. I evolve an abstraction-layered operator-optimization skill system and an agent-native compiler stack, connecting operator implementation, chip-architecture-aware performance optimization, and toolchain auto-development; the resulting work improves LLM serving efficiency and turns real development trajectories into training data for stronger coding and systems agents."
+      - "<strong>Native multi-agent coding systems.</strong> I contribute to multi-agent orchestration strategies and workflow customization for long-horizon systems development, using programmable concurrency and human-in-the-loop workflows."
+      - "<strong>Compiler and runtime substrates.</strong> Earlier systems work provides the surfaces that agents can operate on. IntelliC (<a href='https://github.com/uv-xiao/IntelliC'>GitHub</a>) studies inspectable compiler representations for human-agent collaboration. PTO Runtime (<a href='https://github.com/hw-native-sys/simpler'>GitHub</a>) executes compiled task graphs for serving on Ascend chips and LingQu SuperPods. Hive (<a href='https://arxiv.org/abs/2604.17353'>preprint</a>) exposes multi-agent LLM workloads to inference infrastructure, while Spine (<a href='https://github.com/arch-of-shadow/spine'>GitHub</a>) studies bounded agentic co-design across design intent, architecture, compiler, hardware, and execution evidence."
+      - "<strong>Compiler-driven agile chip design.</strong> My earlier research treats compilers as the organizing layer for architecture customization and hardware-software co-design. Hector (<a href='https://doi.org/10.1145/3508352.3549370'>DOI</a>, <a href='https://github.com/pku-liang/Hector'>GitHub</a>) provides multi-level IRs for hardware synthesis; Cement (<a href='https://doi.org/10.1145/3626202.3637561'>DOI</a>) couples the cycle-deterministic CmtHDL DSL with the CmtC timing-analysis and control-synthesis compiler; APS (<a href='https://doi.org/10.1109/ICCAD66269.2025.11240817'>DOI</a>, <a href='https://github.com/pku-liang/APS'>GitHub</a>) builds an open-source MLIR stack from architecture DSLs to hardware synthesis and software compilation, and Aquas (<a href='https://arxiv.org/abs/2511.22267'>preprint</a>) extends it with domain-specific memory/synthesis directives and an e-graph retargetable compiler. Clay (<a href='https://doi.org/10.1109/ICCAD66269.2025.11240669'>DOI</a>), Cayman (<a href='https://doi.org/10.1109/DAC63849.2025.11132875'>DOI</a>), and SkyEgg (<a href='https://arxiv.org/abs/2511.15323'>preprint</a>) automate microarchitecture and accelerator optimization, while ISAMORE (<a href='https://doi.org/10.1145/3779212.3790162'>DOI</a>) and EggMind (<a href='https://arxiv.org/abs/2604.17364'>preprint</a>) structure compiler search with formal and LLM-guided methods."
     diagram:
-      title_lines:
-        - "Agentic LLM Infrastructure"
-        - "on Emerging AI Chips"
-      capabilities:
-        - title: Operator implementation
-          summary_lines:
-            - "Agents produce functional"
-            - "operators for LLM workloads"
-            - "on new chip backends."
-        - title: Architecture-aware optimization
-          summary_lines:
-            - "Agents optimize with chip"
-            - "architecture, compiler, and"
-            - "runtime constraints in view."
-        - title: Toolchain auto-development
-          summary_lines:
-            - "Agents develop and repair"
-            - "compiler/runtime/toolchain"
-            - "artifacts for new chips."
+      current_title: "Current direction: agents for LLM infrastructure on emerging AI chips"
+      agent:
+        title: "Native multi-agent architecture"
+        summary_lines:
+          - "Programmable concurrent model"
+          - "Human-in-the-loop workflows"
+          - "Orchestration and workflow customization"
+      workflow:
+        title: "Agentic LLM infrastructure"
+        summary_lines:
+          - "Layered operator-optimization skills"
+          - "Agent-native compiler stack"
+          - "Chip-aware performance optimization"
       outcomes:
         - title: LLM serving efficiency
           summary_lines:
-            - "Better operator and runtime paths"
-            - "make new chips serve LLMs faster."
-        - title: Model capability growth
+            - "Make emerging AI chips serve"
+            - "LLM workloads more efficiently."
+        - title: Development trajectories
           summary_lines:
-            - "Development trajectories train"
-            - "stronger coding/systems agents."
-      foundation_title: "Technical foundations from prior systems and papers"
+            - "Turn real systems work into data"
+            - "for stronger coding/systems agents."
+      relations:
+        coordinate: "apply to"
+        serve: "improve service"
+        record: "record trajectories"
+        feedback: "train stronger agents"
+        artifacts: "structured artifacts"
+        methods: "optimization methods"
+        execution: "execution feedback"
+      foundation_title: "Compiler-driven agile chip design foundations"
+      foundation_subtitle: "Represent intent  ->  optimize implementations  ->  execute and observe"
       foundations:
-        - title: "Compiler / formal search"
+        - title: "DSLs & compiler stacks"
+          summary_lines:
+            - "DSLs and multi-level IRs expose"
+            - "hardware/software intent; compiler"
+            - "passes lower it to executable designs."
           work_rows:
-            - [{ name: ISAMORE, link: "https://doi.org/10.1145/3779212.3790162" }, { name: EggMind, link: "https://arxiv.org/abs/2604.17364" }]
-        - title: "IR / co-design interfaces"
+            - [{ name: Hector, link: "https://doi.org/10.1145/3508352.3549370" }, { name: Cement, link: "https://doi.org/10.1145/3626202.3637561" }]
+            - [{ name: APS, link: "https://doi.org/10.1109/ICCAD66269.2025.11240817" }, { name: Aquas, link: "https://arxiv.org/abs/2511.22267" }]
+        - title: "Architecture & synthesis optimization"
+          summary_lines:
+            - "Formal, e-graph, and compiler search"
+            - "automate ISA, microarchitecture,"
+            - "and accelerator optimization."
           work_rows:
-            - [{ name: Hector, link: "https://doi.org/10.1145/3508352.3549370" }, { name: APS, link: "https://doi.org/10.1109/ICCAD66269.2025.11240817" }, { name: Aquas, link: "https://arxiv.org/abs/2511.22267" }]
-            - [{ name: IntelliC, link: "https://github.com/uv-xiao/IntelliC" }, { name: Spine, link: "" }]
-        - title: "Hardware / runtime systems"
+            - [{ name: ISAMORE, link: "https://doi.org/10.1145/3779212.3790162" }, { name: Clay, link: "https://doi.org/10.1109/ICCAD66269.2025.11240669" }, { name: Cayman, link: "https://doi.org/10.1109/DAC63849.2025.11132875" }]
+            - [{ name: SkyEgg, link: "https://arxiv.org/abs/2511.15323" }, { name: EggMind, link: "https://arxiv.org/abs/2604.17364" }]
+        - title: "Execution & co-design systems"
+          summary_lines:
+            - "Inspectable artifacts, task graphs,"
+            - "and runtime feedback connect design"
+            - "intent to deployed systems."
           work_rows:
-            - [{ name: Cement, link: "https://doi.org/10.1145/3626202.3637561" }, { name: Clay, link: "https://doi.org/10.1109/ICCAD66269.2025.11240669" }, { name: SkyEgg, link: "https://arxiv.org/abs/2511.15323" }]
-            - [{ name: Cayman, link: "https://doi.org/10.1109/DAC63849.2025.11132875" }, { name: PTO Runtime, link: "https://github.com/hw-native-sys/simpler" }, { name: Hive, link: "https://arxiv.org/abs/2604.17353" }]
+            - [{ name: IntelliC, link: "https://github.com/uv-xiao/IntelliC" }, { name: PTO Runtime, link: "https://github.com/hw-native-sys/simpler" }]
+            - [{ name: Hive, link: "https://arxiv.org/abs/2604.17353" }, { name: Spine, link: "https://github.com/arch-of-shadow/spine" }]
 
 - title: Selected Publications
   type: time_table
