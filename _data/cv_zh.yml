@@ -42,7 +42,7 @@
       - "<strong>面向 LLM 基础设施的智能体。</strong> 我当前的研究聚焦于新型 AI 芯片上的 LLM 基础设施智能体：演进抽象分层的算子优化 skill 系统与 agent 原生编译体系，贯通算子实现、芯片架构感知性能优化与工具链自动开发；由此提升模型服务效率，并将真实研发 trajectory 转化为增强 coding 与系统智能体能力的训练数据。"
       - "<strong>原生多智能体 coding agent 系统。</strong> 我参与长程系统研发所需的多智能体编排策略与工作流定制，采用程序化并发与 human-in-the-loop 工作流。"
       - "<strong>编译器与运行时底座。</strong> 既有系统工作提供了智能体可操作的系统界面。IntelliC (<a href='https://github.com/uv-xiao/IntelliC'>GitHub</a>) 研究面向人与智能体协作的可检查编译表示。PTO Runtime (<a href='https://github.com/hw-native-sys/simpler'>GitHub</a>) 面向 Ascend 芯片和灵衢 SuperPod 执行编译后的任务图。Hive (<a href='https://arxiv.org/abs/2604.17353'>preprint</a>) 将多智能体大模型负载暴露给推理基础设施，Spine (<a href='https://github.com/arch-of-shadow/spine'>GitHub</a>) 研究跨设计意图、架构、编译器、硬件与执行证据的有界智能体协同设计。"
-      - "<strong>编译器驱动的敏捷芯片设计。</strong> 我此前以编译器为组织架构定制与软硬件协同设计的核心。Hector (<a href='https://doi.org/10.1145/3508352.3549370'>DOI</a>, <a href='https://github.com/pku-liang/Hector'>GitHub</a>) 提供面向硬件综合的多层次 IR；Cement (<a href='https://doi.org/10.1145/3626202.3637561'>DOI</a>) 将周期确定的 CmtHDL 领域专用语言与具备时序分析、控制综合能力的 CmtC 编译栈结合；APS (<a href='https://doi.org/10.1109/ICCAD66269.2025.11240817'>DOI</a>, <a href='https://github.com/pku-liang/APS'>GitHub</a>) 构建从架构 DSL 到硬件综合和软件编译的开源 MLIR 栈，Aquas (<a href='https://arxiv.org/abs/2511.22267'>preprint</a>) 进一步加入面向领域的访存/综合指令与基于 e-graph 的可重定向编译器。Clay (<a href='https://doi.org/10.1109/ICCAD66269.2025.11240669'>DOI</a>)、Cayman (<a href='https://doi.org/10.1109/DAC63849.2025.11132875'>DOI</a>) 与 SkyEgg (<a href='https://arxiv.org/abs/2511.15323'>preprint</a>) 自动化微架构与加速器优化，ISAMORE (<a href='https://doi.org/10.1145/3779212.3790162'>DOI</a>) 和 EggMind (<a href='https://arxiv.org/abs/2604.17364'>preprint</a>) 则以形式化方法和大模型引导方法组织编译搜索。"
+      - "<strong>编译器驱动的敏捷芯片设计。</strong> 我此前以编译器为组织架构定制与软硬件协同设计的核心。Hector (<a href='https://doi.org/10.1145/3508352.3549370'>DOI</a>, <a href='https://github.com/pku-liang/Hector'>GitHub</a>) 提供面向硬件综合的多层次 IR；Cement (<a href='https://doi.org/10.1145/3626202.3637561'>DOI</a>) 将周期确定的 CmtHDL 领域专用语言与具备时序分析、控制综合能力的 CmtC 编译栈结合；APS (<a href='https://doi.org/10.1109/ICCAD66269.2025.11240817'>DOI</a>, <a href='https://github.com/pku-liang/APS'>GitHub</a>) 构建从架构 DSL 到硬件综合和软件编译的开源 MLIR 栈，Aquas (<a href='/assets/pdf/aquas_iccad.pdf'>ICCAD 2026</a>) 进一步加入面向领域的访存/综合指令与基于 e-graph 的可重定向编译器。Clay (<a href='https://doi.org/10.1109/ICCAD66269.2025.11240669'>DOI</a>)、Cayman (<a href='https://doi.org/10.1109/DAC63849.2025.11132875'>DOI</a>) 与 SkyEgg (<a href='https://arxiv.org/abs/2511.15323'>preprint</a>) 自动化微架构与加速器优化，ISAMORE (<a href='https://doi.org/10.1145/3779212.3790162'>DOI</a>) 和 EggMind (<a href='https://arxiv.org/abs/2604.17364'>preprint</a>) 则以形式化方法和大模型引导方法组织编译搜索。"
     diagram:
       current_title: "当前方向：面向新型 AI 芯片 LLM 基础设施的智能体"
       agent:
@@ -85,7 +85,7 @@
             - "逐层降级为可执行设计。"
           work_rows:
             - [{ name: Hector, link: "https://doi.org/10.1145/3508352.3549370" }, { name: Cement, link: "https://doi.org/10.1145/3626202.3637561" }]
-            - [{ name: APS, link: "https://doi.org/10.1109/ICCAD66269.2025.11240817" }, { name: Aquas, link: "https://arxiv.org/abs/2511.22267" }]
+            - [{ name: APS, link: "https://doi.org/10.1109/ICCAD66269.2025.11240817" }, { name: Aquas, link: "/assets/pdf/aquas_iccad.pdf" }]
         - title: "架构定制与硬件综合优化"
           summary_lines:
             - "以形式化方法、e-graph 与编译搜索"

@@ -7,7 +7,7 @@ importance: 2
 category: research
 github: https://github.com/pku-liang/APS
 related_papers:
-  - zou2025aquasenhancingdomainspecialization
+  - zou2026aquas
   - xiao2025aps
   - peng2025clay
 ---
