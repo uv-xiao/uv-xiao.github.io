@@ -17,7 +17,7 @@
       year: 2022 - Present
       description:
         - "Advisor: Prof. Yun Liang"
-        - "Research: agents for LLM infrastructure on emerging AI chips, grounded in compiler-driven hardware-software co-design"
+        - "Research: compiler-driven hardware-software co-design for agile chips"
     - title: Bachelor of Science in Computer Science
       institution: School of EECS, Peking University
       location: Beijing, China
@@ -29,79 +29,61 @@
     - title: Large Language Model Algorithm Intern
       institution: ByteDance Seed
       location: Beijing, China
-      year: 2026 - Present
+      year: June 2026 - Present
       description:
-        - "Contributed to native multi-agent coding systems, focusing on orchestration strategies and workflow customization with programmable concurrency and human-in-the-loop workflows."
-        - "Applied these approaches to LLM infrastructure by evolving an abstraction-layered operator-optimization skill system and an agent-native compiler stack for emerging AI chips."
-        - "Curated agent development data and trajectories from real systems tasks, turning infrastructure work into training signals for stronger coding and systems agents."
+        - "Created an extensible benchmark of kernel programming and optimization tasks for dataflow-architecture chips."
+        - "Developed a layered knowledge and skill system across multiple compilation paths and full-spectrum data collection and training workflows for continual model evolution."
+        - "Pursuing the ultimate goal of developing a methodology and workflow that enable models and agents to rapidly acquire expert-level kernel optimization capabilities for new chip architectures."
 
 - title: Research
   type: research_story
   contents:
     paragraphs:
-      - "<strong>Agentic LLM infrastructure.</strong> My current research centers on agents for LLM infrastructure on emerging AI chips. I evolve an abstraction-layered operator-optimization skill system and an agent-native compiler stack, connecting operator implementation, chip-architecture-aware performance optimization, and toolchain auto-development; the resulting work improves LLM serving efficiency and turns real development trajectories into training data for stronger coding and systems agents."
-      - "<strong>Native multi-agent coding systems.</strong> I contribute to multi-agent orchestration strategies and workflow customization for long-horizon systems development, using programmable concurrency and human-in-the-loop workflows."
-      - "<strong>Compiler and runtime substrates.</strong> Earlier systems work provides the surfaces that agents can operate on. IntelliC (<a href='https://github.com/uv-xiao/IntelliC'>GitHub</a>) studies inspectable compiler representations for human-agent collaboration. PTO Runtime (<a href='https://github.com/hw-native-sys/simpler'>GitHub</a>) executes compiled task graphs for serving on Ascend chips and LingQu SuperPods. Hive (<a href='https://arxiv.org/abs/2604.17353'>preprint</a>) exposes multi-agent LLM workloads to inference infrastructure, while Spine (<a href='https://github.com/arch-of-shadow/spine'>GitHub</a>) studies bounded agentic co-design across design intent, architecture, compiler, hardware, and execution evidence."
-      - "<strong>Compiler-driven agile chip design.</strong> My earlier research treats compilers as the organizing layer for architecture customization and hardware-software co-design. Hector (<a href='https://doi.org/10.1145/3508352.3549370'>DOI</a>, <a href='https://github.com/pku-liang/Hector'>GitHub</a>) provides multi-level IRs for hardware synthesis; Cement (<a href='https://doi.org/10.1145/3626202.3637561'>DOI</a>) couples the cycle-deterministic CmtHDL DSL with the CmtC timing-analysis and control-synthesis compiler; APS (<a href='https://doi.org/10.1109/ICCAD66269.2025.11240817'>DOI</a>, <a href='https://github.com/pku-liang/APS'>GitHub</a>) builds an open-source MLIR stack from architecture DSLs to hardware synthesis and software compilation, and Aquas (<a href='/assets/pdf/aquas_iccad.pdf'>ICCAD 2026</a>) extends it with domain-specific memory/synthesis directives and an e-graph retargetable compiler. Clay (<a href='https://doi.org/10.1109/ICCAD66269.2025.11240669'>DOI</a>), Cayman (<a href='https://doi.org/10.1109/DAC63849.2025.11132875'>DOI</a>), and SkyEgg (<a href='https://arxiv.org/abs/2511.15323'>preprint</a>) automate microarchitecture and accelerator optimization, while ISAMORE (<a href='https://doi.org/10.1145/3779212.3790162'>DOI</a>) and EggMind (<a href='https://arxiv.org/abs/2604.17364'>preprint</a>) structure compiler search with formal and LLM-guided methods."
+      - "My research follows a <strong>compiler-driven approach to agile hardware-software co-design</strong>. Three coupled threads form a closed loop: architecture description and exploration discovers and formalizes reusable hardware capabilities; chip DSL and compilation express those capabilities and lower them into implementations; compiler optimization and LLM systems improve the resulting compiler, execution, and co-design workflows."
+      - "<strong>Current kernel model and agent work.</strong> At ByteDance Seed, I create an extensible benchmark of kernel programming and optimization tasks for dataflow-architecture chips, develop a layered knowledge and skill system across multiple compilation paths, and build full-spectrum data collection and training workflows for continual model evolution. The ultimate goal is a methodology and workflow that enable models and agents to rapidly acquire expert-level kernel optimization capabilities for new chip architectures."
+      - "<strong>Architecture description and exploration.</strong> I combine compiler analysis, formal methods, and architecture DSLs to represent and search design spaces while connecting customized hardware capabilities to programmable software. ISAMORE (<a href='https://doi.org/10.1145/3779212.3790162'>DOI</a>) discovers reusable custom instructions by anti-unifying equivalent program fragments; Cayman (<a href='https://doi.org/10.1109/DAC63849.2025.11132875'>DOI</a>) identifies accelerator opportunities in complete applications while co-optimizing control flow and data access; APS (<a href='https://doi.org/10.1109/ICCAD66269.2025.11240817'>DOI</a>, <a href='https://github.com/pku-liang/APS'>GitHub</a>) and Aquas (<a href='/assets/pdf/aquas_iccad.pdf'>ICCAD 2026</a>) describe customized architectures through DSLs and expose them through complete hardware/software compiler stacks."
+      - "<strong>Chip DSL and compilation.</strong> I create DSLs and intermediate representations at multiple abstraction levels, then develop compilation and synthesis passes that optimize timing, microarchitecture, implementation selection, mapping, and scheduling. Hector (<a href='https://doi.org/10.1145/3508352.3549370'>DOI</a>, <a href='https://github.com/pku-liang/Hector'>GitHub</a>) provides multi-level MLIR foundations; Cement (<a href='https://doi.org/10.1145/3626202.3637561'>DOI</a>) and Cement2 (<a href='https://arxiv.org/abs/2511.15073'>preprint</a>) introduce cycle-deterministic DSL and temporal-transaction abstractions; Clay (<a href='https://doi.org/10.1109/ICCAD66269.2025.11240669'>DOI</a>) makes ASIP instructions microarchitecture-aware; SkyEgg (<a href='https://arxiv.org/abs/2511.15323'>preprint</a>) jointly optimizes implementation selection and scheduling with e-graphs."
+      - "<strong>Compiler optimization and LLM systems.</strong> I explore LLMs for compiler and hardware-software co-design workflows, together with compiler and system support for LLM workloads. EggMind (<a href='https://arxiv.org/abs/2604.17364'>preprint</a>) synthesizes equality-saturation strategies; IntelliC (<a href='https://github.com/uv-xiao/IntelliC'>GitHub</a>) studies inspectable representations for human-model compilation; Spine (<a href='https://github.com/arch-of-shadow/spine'>GitHub</a>) organizes verification-bounded cross-layer co-synthesis; PTO Runtime (<a href='https://github.com/hw-native-sys/simpler'>GitHub</a>) supports dynamic kernel fusion and distributed execution of compiled task graphs on Ascend chips and LingQu SuperPods; Hive (<a href='https://arxiv.org/abs/2604.17353'>preprint</a>) provides multi-agent inference infrastructure."
     diagram:
-      current_title: "Current direction: agents for LLM infrastructure on emerging AI chips"
-      agent:
-        title: "Native multi-agent architecture"
-        summary_lines:
-          - "Programmable concurrent model"
-          - "Human-in-the-loop workflows"
-          - "Orchestration and workflow customization"
-      workflow:
-        title: "Agentic LLM infrastructure"
-        summary_lines:
-          - "Layered operator-optimization skills"
-          - "Agent-native compiler stack"
-          - "Chip-aware performance optimization"
-      outcomes:
-        - title: LLM serving efficiency
+      current_work:
+        title: "Internship topic: Agent for automated chip-kernel optimization across new domains and long-horizon tasks"
+        items:
+          - "Extensible dataflow-chip kernel benchmark"
+          - "Multi-path layered knowledge & skills"
+          - "Full-spectrum data & training workflows"
+      classes:
+        - title: Architecture description & exploration
           summary_lines:
-            - "Make emerging AI chips serve"
-            - "LLM workloads more efficiently."
-        - title: Development trajectories
+            - "Analysis, formal methods, and DSLs"
+            - "describe and explore architecture"
+            - "design spaces."
+          works:
+            - { name: ISAMORE, tag: "ASPLOS '26", link: "https://doi.org/10.1145/3779212.3790162" }
+            - { name: Cayman, tag: "DAC '25", link: "https://doi.org/10.1109/DAC63849.2025.11132875" }
+            - { name: APS, tag: "ICCAD '25", link: "https://doi.org/10.1109/ICCAD66269.2025.11240817" }
+            - { name: Aquas, tag: "ICCAD '26", link: "/assets/pdf/aquas_iccad.pdf" }
+        - title: Chip DSL & compilation
           summary_lines:
-            - "Turn real systems work into data"
-            - "for stronger coding/systems agents."
-      relations:
-        coordinate: "apply to"
-        serve: "improve service"
-        record: "record trajectories"
-        feedback: "train stronger agents"
-        artifacts: "structured artifacts"
-        methods: "optimization methods"
-        execution: "execution feedback"
-      foundation_title: "Compiler-driven agile chip design foundations"
-      foundation_subtitle: "Represent intent  ->  optimize implementations  ->  execute and observe"
-      foundations:
-        - title: "DSLs & compiler stacks"
+            - "DSLs, multi-level IRs, and compiler"
+            - "stacks lower architecture intent into"
+            - "hardware."
+          works:
+            - { name: Hector, tag: "ICCAD '22", link: "https://doi.org/10.1145/3508352.3549370" }
+            - { name: Cement, tag: "FPGA '24", link: "https://doi.org/10.1145/3626202.3637561" }
+            - { name: Cement2, tag: "preprint", link: "https://arxiv.org/abs/2511.15073" }
+            - { name: Clay, tag: "ICCAD '25", link: "https://doi.org/10.1109/ICCAD66269.2025.11240669" }
+            - { name: SkyEgg, tag: "preprint", link: "https://arxiv.org/abs/2511.15323" }
+        - title: Compiler optimization & LLM systems
           summary_lines:
-            - "DSLs and multi-level IRs expose"
-            - "hardware/software intent; compiler"
-            - "passes lower it to executable designs."
-          work_rows:
-            - [{ name: Hector, link: "https://doi.org/10.1145/3508352.3549370" }, { name: Cement, link: "https://doi.org/10.1145/3626202.3637561" }]
-            - [{ name: APS, link: "https://doi.org/10.1109/ICCAD66269.2025.11240817" }, { name: Aquas, link: "/assets/pdf/aquas_iccad.pdf" }]
-        - title: "Architecture & synthesis optimization"
-          summary_lines:
-            - "Formal, e-graph, and compiler search"
-            - "automate ISA, microarchitecture,"
-            - "and accelerator optimization."
-          work_rows:
-            - [{ name: ISAMORE, link: "https://doi.org/10.1145/3779212.3790162" }, { name: Clay, link: "https://doi.org/10.1109/ICCAD66269.2025.11240669" }, { name: Cayman, link: "https://doi.org/10.1109/DAC63849.2025.11132875" }]
-            - [{ name: SkyEgg, link: "https://arxiv.org/abs/2511.15323" }, { name: EggMind, link: "https://arxiv.org/abs/2604.17364" }]
-        - title: "Execution & co-design systems"
-          summary_lines:
-            - "Inspectable artifacts, task graphs,"
-            - "and runtime feedback connect design"
-            - "intent to deployed systems."
-          work_rows:
-            - [{ name: IntelliC, link: "https://github.com/uv-xiao/IntelliC" }, { name: PTO Runtime, link: "https://github.com/hw-native-sys/simpler" }]
-            - [{ name: Hive, link: "https://arxiv.org/abs/2604.17353" }, { name: Spine, link: "https://github.com/arch-of-shadow/spine" }]
-
+            - "LLMs advance compiler and co-design"
+            - "workflows; compiler/runtime systems"
+            - "support LLM execution."
+          works:
+            - { name: EggMind, tag: "preprint", link: "https://arxiv.org/abs/2604.17364" }
+            - { name: IntelliC, tag: "GitHub", link: "https://github.com/uv-xiao/IntelliC" }
+            - { name: Spine, tag: "GitHub", link: "https://github.com/arch-of-shadow/spine" }
+            - { name: PTO Runtime, tag: "GitHub", link: "https://github.com/hw-native-sys/simpler" }
+            - { name: Hive, tag: "preprint", link: "https://arxiv.org/abs/2604.17353" }
 - title: Selected Publications
   type: time_table
   contents:
@@ -146,6 +128,19 @@
       description:
         - "Ruifan Xu, Youwei Xiao, Jin Luo, Yun Liang"
 
+- title: Academic Service
+  type: time_table
+  contents:
+    - title: Student Technical Program Committee Member
+      institution: 59th IEEE/ACM International Symposium on Microarchitecture (MICRO 2026)
+      year: 2026
+    - title: Technical Program Committee Member
+      institution: ACM/IEEE Workshop on Machine Learning for CAD (MLCAD 2026)
+      year: 2026
+    - title: Journal Reviewer
+      institution: IEEE Transactions on Computer-Aided Design of Integrated Circuits and Systems (TCAD); ACM Transactions on Embedded Computing Systems (TECS)
+      year: 2024
+
 - title: Honors and Awards
   type: time_table
   contents:
@@ -162,7 +157,6 @@
       institution: Awarded to only 5 students at EECS, Peking University, for academic excellence
       year: 2018-2019
     - title: Shenzhen Stock Exchange Scholarship
-      institution: Awarded to 17 students from EECS, Peking University
       year: 2019-2020
     - title: Merit Student
       institution: Awarded to top 10% students for comprehensive excellence

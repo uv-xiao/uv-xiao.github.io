@@ -1,136 +1,102 @@
 <div class="research-story">
   {% for paragraph in entry.contents.paragraphs %}
-    <p>{{ paragraph }}</p>
+    {% assign paragraph_prefix = paragraph | strip | slice: 0, 8 %}
+    <p{% if paragraph_prefix == '<strong>' %} class="research-story-detail"{% endif %}>{{ paragraph }}</p>
   {% endfor %}
 
   <div class="research-diagram" aria-label="Research story diagram">
-    <svg class="research-diagram-svg" viewBox="0 0 1200 720" role="img">
-      <defs>
-        <marker id="research-arrow-blue" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto" markerUnits="strokeWidth">
-          <path d="M0,0 L8,4 L0,8 Z" class="research-svg-arrow-head research-svg-blue-fill"></path>
-        </marker>
-        <marker id="research-arrow-green" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto" markerUnits="strokeWidth">
-          <path d="M0,0 L8,4 L0,8 Z" class="research-svg-arrow-head research-svg-green-fill"></path>
-        </marker>
-      </defs>
+    {% assign arch_class = entry.contents.diagram.classes[0] %}
+    {% assign synth_class = entry.contents.diagram.classes[1] %}
+    {% assign llm_class = entry.contents.diagram.classes[2] %}
+    {% assign compact_diagram = entry.contents.diagram.compact | default: false %}
+    {% if compact_diagram %}
+      {% assign diagram_height = 360 %}
+      {% assign group_height = 255 %}
+      {% assign class_y = 138 %}
+      {% assign class_height = 200 %}
+      {% assign class_title_y = 166 %}
+      {% assign class_body_y = 194 %}
+    {% else %}
+      {% assign diagram_height = 415 %}
+      {% assign group_height = 310 %}
+      {% assign class_y = 138 %}
+      {% assign class_height = 255 %}
+      {% assign class_title_y = 168 %}
+      {% assign class_body_y = 200 %}
+    {% endif %}
+    <svg class="research-diagram-svg" viewBox="0 0 1200 {{ diagram_height }}" role="img">
 
-      <text class="research-svg-section-title research-svg-blue-text" x="50" y="42">{{ entry.contents.diagram.current_title }}</text>
-
-      <g class="research-svg-center">
-        <rect x="50" y="95" width="300" height="145" rx="4"></rect>
-        <text class="research-svg-title" x="200" y="127">{{ entry.contents.diagram.agent.title }}</text>
-        <text class="research-svg-body" x="75" y="161">
-          {% for line in entry.contents.diagram.agent.summary_lines %}
-            <tspan x="75" dy="{% if forloop.first %}0{% else %}21{% endif %}">{{ line }}</tspan>
-          {% endfor %}
-        </text>
+      <g class="research-svg-current-band">
+        <rect x="30" y="15" width="1140" height="72" rx="4"></rect>
+        <text class="research-svg-current-title research-svg-green-text" x="600" y="42">{{ entry.contents.diagram.current_work.title }}</text>
+        {% assign current_item_count = entry.contents.diagram.current_work.items.size %}
+        {% assign current_item_step = 1140 | divided_by: current_item_count %}
+        {% assign current_item_half_step = current_item_step | divided_by: 2 %}
+        {% for item in entry.contents.diagram.current_work.items %}
+          {% assign item_x = forloop.index0 | times: current_item_step | plus: current_item_half_step | plus: 30 %}
+          <text class="research-svg-current-item" x="{{ item_x }}" y="70">{{ item }}</text>
+          {% unless forloop.last %}
+            {% assign divider_x = forloop.index | times: current_item_step | plus: 30 %}
+            <path class="research-svg-current-divider" d="M{{ divider_x }} 51 V77"></path>
+          {% endunless %}
+        {% endfor %}
       </g>
 
-      <g class="research-svg-class">
-        <rect x="440" y="95" width="350" height="145" rx="4"></rect>
-        <text class="research-svg-title" x="615" y="127">{{ entry.contents.diagram.workflow.title }}</text>
-        <text class="research-svg-body" x="470" y="161">
-          {% for line in entry.contents.diagram.workflow.summary_lines %}
-            <tspan x="470" dy="{% if forloop.first %}0{% else %}21{% endif %}">{{ line }}</tspan>
-          {% endfor %}
-        </text>
+      <g class="research-svg-research-group">
+        <rect x="20" y="100" width="1160" height="{{ group_height }}" rx="5"></rect>
+        <text class="research-svg-region-label" x="600" y="126">{% if page.lang contains 'zh' %}科研工作{% else %}Research work{% endif %}</text>
       </g>
 
-      {% for outcome in entry.contents.diagram.outcomes %}
-        {% if forloop.index0 == 0 %}
-          {% assign out_y = 95 %}
-          {% assign title_y = 123 %}
-          {% assign body_y = 151 %}
-        {% else %}
-          {% assign out_y = 205 %}
-          {% assign title_y = 233 %}
-          {% assign body_y = 261 %}
-        {% endif %}
-        <g class="research-svg-outcome">
-          <rect x="880" y="{{ out_y }}" width="270" height="95" rx="4"></rect>
-          <text class="research-svg-title research-svg-green-text" x="1015" y="{{ title_y }}">{{ outcome.title }}</text>
-          <text class="research-svg-body research-svg-green-text" x="900" y="{{ body_y }}">
-            {% for line in outcome.summary_lines %}
-              <tspan x="900" dy="{% if forloop.first %}0{% else %}18{% endif %}">{{ line }}</tspan>
-            {% endfor %}
-          </text>
-        </g>
-      {% endfor %}
-
-      <path class="research-svg-connector research-svg-blue-stroke" marker-end="url(#research-arrow-blue)" d="M350 168 H440"></path>
-      <rect class="research-svg-label-bg" x="358" y="149" width="74" height="24" rx="3"></rect>
-      <text class="research-svg-label research-svg-blue-text" x="395" y="166">{{ entry.contents.diagram.relations.coordinate }}</text>
-
-      <path class="research-svg-connector research-svg-green-stroke" marker-end="url(#research-arrow-green)" d="M790 142 C820 142 850 142 880 142"></path>
-      <rect class="research-svg-label-bg" x="790" y="123" width="90" height="24" rx="3"></rect>
-      <text class="research-svg-label research-svg-green-text" x="835" y="140">{{ entry.contents.diagram.relations.serve }}</text>
-
-      <path class="research-svg-connector research-svg-green-stroke" marker-end="url(#research-arrow-green)" d="M790 200 C825 200 845 252 880 252"></path>
-      <rect class="research-svg-label-bg" x="778" y="214" width="112" height="24" rx="3"></rect>
-      <text class="research-svg-label research-svg-green-text" x="834" y="231">{{ entry.contents.diagram.relations.record }}</text>
-
-      <path class="research-svg-connector research-svg-green-stroke" marker-end="url(#research-arrow-green)"
-        d="M1150 252 H1163 Q1180 252 1180 235 V84 Q1180 68 1164 68 H320 Q300 68 300 88 V95"></path>
-      <rect class="research-svg-label-bg" x="640" y="55" width="160" height="24" rx="3"></rect>
-      <text class="research-svg-label research-svg-green-text" x="720" y="72">{{ entry.contents.diagram.relations.feedback }}</text>
-
-      <g class="research-svg-foundation-band">
-        <rect x="35" y="385" width="1130" height="310" rx="4"></rect>
-        <text class="research-svg-band-title research-svg-blue-text" x="600" y="414">{{ entry.contents.diagram.foundation_title }}</text>
-        <text class="research-svg-band-subtitle" x="600" y="440">{{ entry.contents.diagram.foundation_subtitle }}</text>
-      </g>
-
-      <path class="research-svg-bridge research-svg-blue-stroke" marker-end="url(#research-arrow-blue)" d="M220 385 C220 330 200 300 200 240"></path>
-      <rect class="research-svg-label-bg" x="150" y="310" width="140" height="24" rx="3"></rect>
-      <text class="research-svg-label research-svg-blue-text" x="220" y="327">{{ entry.contents.diagram.relations.artifacts }}</text>
-
-      <path class="research-svg-bridge research-svg-blue-stroke" marker-end="url(#research-arrow-blue)" d="M600 385 C600 330 615 300 615 240"></path>
-      <rect class="research-svg-label-bg" x="528" y="310" width="144" height="24" rx="3"></rect>
-      <text class="research-svg-label research-svg-blue-text" x="600" y="327">{{ entry.contents.diagram.relations.methods }}</text>
-
-      <path class="research-svg-bridge research-svg-blue-stroke" marker-end="url(#research-arrow-blue)" d="M980 385 C980 330 770 305 740 240"></path>
-      <rect class="research-svg-label-bg" x="810" y="310" width="140" height="24" rx="3"></rect>
-      <text class="research-svg-label research-svg-blue-text" x="880" y="327">{{ entry.contents.diagram.relations.execution }}</text>
-
-      {% for foundation in entry.contents.diagram.foundations %}
+      {% for research_class in entry.contents.diagram.classes %}
         {% case forloop.index0 %}
           {% when 0 %}
-            {% assign f_x = 55 %}
-            {% assign f_mid = 220 %}
+            {% assign class_x = 40 %}
+            {% assign class_mid = 215 %}
+            {% if compact_diagram %}
+              {% assign work_start = 262 %}
+              {% assign work_step = 18 %}
+            {% else %}
+              {% assign work_start = 282 %}
+              {% assign work_step = 21 %}
+            {% endif %}
           {% when 1 %}
-            {% assign f_x = 435 %}
-            {% assign f_mid = 600 %}
+            {% assign class_x = 425 %}
+            {% assign class_mid = 600 %}
+            {% if compact_diagram %}
+              {% assign work_start = 244 %}
+              {% assign work_step = 18 %}
+            {% else %}
+              {% assign work_start = 262 %}
+              {% assign work_step = 21 %}
+            {% endif %}
           {% when 2 %}
-            {% assign f_x = 815 %}
-            {% assign f_mid = 980 %}
+            {% assign class_x = 810 %}
+            {% assign class_mid = 985 %}
+            {% if compact_diagram %}
+              {% assign work_start = 254 %}
+              {% assign work_step = 18 %}
+            {% else %}
+              {% assign work_start = 270 %}
+              {% assign work_step = 21 %}
+            {% endif %}
         {% endcase %}
-        <g class="research-svg-foundation-card">
-          <rect x="{{ f_x }}" y="465" width="330" height="205" rx="4"></rect>
-          <text class="research-svg-foundation-title" x="{{ f_mid }}" y="496">{{ foundation.title }}</text>
-          <text class="research-svg-foundation-summary" x="{{ f_x | plus: 22 }}" y="530">
-            {% for line in foundation.summary_lines %}
-              <tspan x="{{ f_x | plus: 22 }}" dy="{% if forloop.first %}0{% else %}19{% endif %}">{{ line }}</tspan>
+        <g class="research-svg-class">
+          <rect x="{{ class_x }}" y="{{ class_y }}" width="350" height="{{ class_height }}" rx="4"></rect>
+          <text class="research-svg-title" x="{{ class_mid }}" y="{{ class_title_y }}">{{ research_class.title }}</text>
+          <text class="research-svg-body" x="{{ class_x | plus: 24 }}" y="{{ class_body_y }}">
+            {% for line in research_class.summary_lines %}
+              <tspan x="{{ class_x | plus: 24 }}" dy="{% if forloop.first %}0{% else %}20{% endif %}">{{ line }}</tspan>
             {% endfor %}
           </text>
-          <text class="research-svg-work" x="{{ f_x | plus: 22 }}" y="614">
-            {% for row in foundation.work_rows %}
-              <tspan x="{{ f_x | plus: 22 }}" dy="{% if forloop.first %}0{% else %}20{% endif %}">
-              {% for work in row %}
-                {% if work.link != "" %}
-                  <a href="{{ work.link }}"><tspan class="research-svg-work-name">{{ work.name }}</tspan></a>
-                {% else %}
-                  <tspan class="research-svg-work-name">{{ work.name }}</tspan>
-                {% endif %}
-                {% unless forloop.last %}<tspan>, </tspan>{% endunless %}
-              {% endfor %}
-              </tspan>
-            {% endfor %}
-          </text>
+          {% for work in research_class.works %}
+            {% assign work_y = forloop.index0 | times: work_step | plus: work_start %}
+            <text class="research-svg-work" x="{{ class_x | plus: 24 }}" y="{{ work_y }}">
+              <tspan class="research-svg-work-name">{{ work.name }}</tspan>{% if work.tag != "" %}<tspan> (</tspan>{% if work.link != "" %}<a href="{{ work.link }}"><tspan class="research-svg-work-tag">{{ work.tag }}</tspan></a>{% else %}<tspan>{{ work.tag }}</tspan>{% endif %}<tspan>)</tspan>{% endif %}
+            </text>
+          {% endfor %}
         </g>
       {% endfor %}
 
-      <path class="research-svg-sequence research-svg-blue-stroke" marker-end="url(#research-arrow-blue)" d="M385 568 H435"></path>
-      <path class="research-svg-sequence research-svg-blue-stroke" marker-end="url(#research-arrow-blue)" d="M765 568 H815"></path>
     </svg>
   </div>
 </div>

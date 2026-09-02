@@ -109,6 +109,16 @@ div.research-story p {
   margin-bottom: 0.75rem;
 }
 
+div.research-story p.research-story-detail > strong:first-child {
+  color: var(--global-theme-color);
+  display: inline-block;
+  font-size: 1.06em;
+  font-weight: 700;
+  line-height: 1.2;
+  margin-right: 0.15em;
+  border-bottom: 2px solid var(--global-theme-color);
+}
+
 div.card.cv-research-card {
   margin-left: calc(-1 * min(2vw, 1.25rem));
   margin-right: calc(-1 * min(2vw, 1.25rem));
@@ -135,9 +145,49 @@ svg.research-diagram-svg a {
 }
 
 .research-svg-class rect {
-  fill: rgba(0, 123, 255, 0.08);
+  fill: rgba(0, 123, 255, 0.075);
   stroke: var(--global-theme-color);
-  stroke-width: 1.4;
+  stroke-width: 1.35;
+}
+
+.research-svg-research-group rect {
+  fill: rgba(0, 123, 255, 0.025);
+  stroke: var(--global-theme-color);
+  stroke-opacity: 0.72;
+  stroke-width: 1.55;
+}
+
+.research-svg-current-band rect {
+  fill: rgba(0, 140, 115, 0.06);
+  stroke: #008c73;
+  stroke-width: 1.3;
+}
+
+.research-svg-current-title {
+  font-size: 17px;
+  font-weight: 700;
+  text-anchor: middle;
+}
+
+.research-svg-current-item {
+  fill: #008c73;
+  font-size: 14px;
+  font-weight: 600;
+  text-anchor: middle;
+}
+
+.research-svg-current-divider {
+  fill: none;
+  stroke: #008c73;
+  stroke-opacity: 0.38;
+  stroke-width: 1;
+}
+
+.research-svg-region-label {
+  fill: var(--global-theme-color);
+  font-size: 17px;
+  font-weight: 700;
+  text-anchor: middle;
 }
 
 .research-svg-center rect {
@@ -171,24 +221,28 @@ svg.research-diagram-svg a {
 
 .research-svg-title {
   fill: var(--global-theme-color);
-  font-size: 20px;
+  font-size: 19px;
   font-weight: 700;
   text-anchor: middle;
 }
 
 .research-svg-body {
   fill: var(--global-theme-color);
-  font-size: 18px;
-  line-height: 1.3;
+  font-size: 17px;
+  line-height: 1.2;
 }
 
 .research-svg-work {
   fill: var(--global-theme-color);
-  font-size: 16px;
+  font-size: 16.5px;
 }
 
 .research-svg-work-name {
   font-weight: 700;
+}
+
+.research-svg-work-tag {
+  text-decoration: underline;
 }
 
 .research-svg-foundation-title {
@@ -220,13 +274,6 @@ svg.research-diagram-svg a {
   text-anchor: middle;
 }
 
-.research-svg-connector {
-  fill: none;
-  stroke-width: 2.6;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-
 .research-svg-bridge {
   fill: none;
   stroke-width: 2.1;
@@ -238,37 +285,6 @@ svg.research-diagram-svg a {
   fill: none;
   stroke-width: 1.8;
   stroke-linecap: round;
-}
-
-.research-svg-blue-stroke {
-  stroke: var(--global-theme-color);
-}
-
-.research-svg-green-stroke {
-  stroke: #008c73;
-}
-
-.research-svg-blue-fill {
-  fill: var(--global-theme-color);
-}
-
-.research-svg-green-fill {
-  fill: #008c73;
-}
-
-.research-svg-label-bg {
-  fill: var(--global-bg-color);
-  stroke: none;
-}
-
-.research-svg-label {
-  font-size: 13px;
-  font-weight: 700;
-  text-anchor: middle;
-}
-
-.research-svg-blue-text {
-  fill: var(--global-theme-color);
 }
 
 .research-svg-green-text {

@@ -17,7 +17,7 @@
       year: 2022 - 至今
       description:
         - "导师：梁云教授"
-        - "研究方向：面向新型 AI 芯片大模型基础设施的智能体，以编译器驱动的敏捷芯片软硬件协同设计为技术基础"
+        - "研究方向：编译器与软硬件协同优化、大模型驱动编译优化与算子生成"
     - title: 计算机科学与技术理学学士
       institution: 北京大学信息科学技术学院
       location: 中国北京
@@ -29,80 +29,61 @@
     - title: 大语言模型算法实习生
       institution: ByteDance Seed
       location: 中国北京
-      year: 2026 - 至今
+      year: 2026 年 6 月 - 至今
       description:
-        - "参与原生多智能体 coding agent 系统研发，聚焦多智能体编排策略与工作流定制，并以程序化并发和 human-in-the-loop 工作流支撑长程系统研发。"
-        - "将这些方法用于 LLM 基础设施：演进抽象分层的算子优化 skill 系统，并构建面向新型 AI 芯片的 agent 原生编译体系。"
-        - "沉淀真实系统任务中的智能体开发数据与 trajectory，将基础设施研发过程转化为增强 coding 与系统智能体能力的训练信号。"
+        - "创建面向数据流架构芯片、覆盖算子编程与优化任务的可扩展 Benchmark。"
+        - "构建多编译路径的分层知识与技能系统，以及全场景的数据采集与训练工作流，以持续演进模型能力。"
+        - "最终目标是构建一套方法与流程，使模型与智能体能够快速具备面向新芯片架构的专家级算子优化能力。"
 
 - title: 研究方向
   type: research_story
   contents:
     paragraphs:
-      - "<strong>面向 LLM 基础设施的智能体。</strong> 我当前的研究聚焦于新型 AI 芯片上的 LLM 基础设施智能体：演进抽象分层的算子优化 skill 系统与 agent 原生编译体系，贯通算子实现、芯片架构感知性能优化与工具链自动开发；由此提升模型服务效率，并将真实研发 trajectory 转化为增强 coding 与系统智能体能力的训练数据。"
-      - "<strong>原生多智能体 coding agent 系统。</strong> 我参与长程系统研发所需的多智能体编排策略与工作流定制，采用程序化并发与 human-in-the-loop 工作流。"
-      - "<strong>编译器与运行时底座。</strong> 既有系统工作提供了智能体可操作的系统界面。IntelliC (<a href='https://github.com/uv-xiao/IntelliC'>GitHub</a>) 研究面向人与智能体协作的可检查编译表示。PTO Runtime (<a href='https://github.com/hw-native-sys/simpler'>GitHub</a>) 面向 Ascend 芯片和灵衢 SuperPod 执行编译后的任务图。Hive (<a href='https://arxiv.org/abs/2604.17353'>preprint</a>) 将多智能体大模型负载暴露给推理基础设施，Spine (<a href='https://github.com/arch-of-shadow/spine'>GitHub</a>) 研究跨设计意图、架构、编译器、硬件与执行证据的有界智能体协同设计。"
-      - "<strong>编译器驱动的敏捷芯片设计。</strong> 我此前以编译器为组织架构定制与软硬件协同设计的核心。Hector (<a href='https://doi.org/10.1145/3508352.3549370'>DOI</a>, <a href='https://github.com/pku-liang/Hector'>GitHub</a>) 提供面向硬件综合的多层次 IR；Cement (<a href='https://doi.org/10.1145/3626202.3637561'>DOI</a>) 将周期确定的 CmtHDL 领域专用语言与具备时序分析、控制综合能力的 CmtC 编译栈结合；APS (<a href='https://doi.org/10.1109/ICCAD66269.2025.11240817'>DOI</a>, <a href='https://github.com/pku-liang/APS'>GitHub</a>) 构建从架构 DSL 到硬件综合和软件编译的开源 MLIR 栈，Aquas (<a href='/assets/pdf/aquas_iccad.pdf'>ICCAD 2026</a>) 进一步加入面向领域的访存/综合指令与基于 e-graph 的可重定向编译器。Clay (<a href='https://doi.org/10.1109/ICCAD66269.2025.11240669'>DOI</a>)、Cayman (<a href='https://doi.org/10.1109/DAC63849.2025.11132875'>DOI</a>) 与 SkyEgg (<a href='https://arxiv.org/abs/2511.15323'>preprint</a>) 自动化微架构与加速器优化，ISAMORE (<a href='https://doi.org/10.1145/3779212.3790162'>DOI</a>) 和 EggMind (<a href='https://arxiv.org/abs/2604.17364'>preprint</a>) 则以形式化方法和大模型引导方法组织编译搜索。"
+      - "我的研究方向是<strong>编译器与软硬件协同优化、大模型驱动编译优化与算子生成</strong>，围绕敏捷芯片设计与编译优化的软硬件协同形成三个相互耦合的方向：架构描述与探索发现并形式化可复用硬件能力；芯片设计语言与编译表达这些能力并将其综合为具体实现；编译优化与 LLM 系统持续改进编译、执行和协同设计流程。"
+      - "<strong>当前算子模型与智能体工作。</strong> 在 ByteDance Seed，我创建面向数据流架构芯片、覆盖算子编程与优化任务的可扩展 Benchmark，构建多编译路径的分层知识与技能系统，以及全场景的数据采集与训练工作流，以持续演进模型能力。最终目标是构建一套方法与流程，使模型与智能体能够快速具备面向新芯片架构的专家级算子优化能力。"
+      - "<strong>架构描述与探索。</strong> 我结合编译分析、形式化方法和架构 DSL，表示并搜索设计空间，并将定制硬件能力连接到可编程软件。ISAMORE (<a href='https://doi.org/10.1145/3779212.3790162'>DOI</a>) 通过对等价程序片段进行反合一发现可复用自定义指令；Cayman (<a href='https://doi.org/10.1109/DAC63849.2025.11132875'>DOI</a>) 从完整应用中发现加速器机会，并协同优化控制流与数据访问；APS (<a href='https://doi.org/10.1109/ICCAD66269.2025.11240817'>DOI</a>, <a href='https://github.com/pku-liang/APS'>GitHub</a>) 和 Aquas (<a href='/assets/pdf/aquas_iccad.pdf'>ICCAD 2026</a>) 通过 DSL 描述定制架构，并以完整软硬件编译栈暴露其可编程能力。"
+      - "<strong>芯片设计语言与编译。</strong> 我在多个抽象层次设计领域专用语言和中间表示，并提出编译与综合 pass，用于优化时序、微架构、实现选择、映射与调度。Hector (<a href='https://doi.org/10.1145/3508352.3549370'>DOI</a>, <a href='https://github.com/pku-liang/Hector'>GitHub</a>) 提供多层次 MLIR 基础；Cement (<a href='https://doi.org/10.1145/3626202.3637561'>DOI</a>) 与 Cement2 (<a href='https://arxiv.org/abs/2511.15073'>preprint</a>) 分别提出周期确定的 DSL 与时间事务抽象；Clay (<a href='https://doi.org/10.1109/ICCAD66269.2025.11240669'>DOI</a>) 实现微架构感知的 ASIP 指令；SkyEgg (<a href='https://arxiv.org/abs/2511.15323'>preprint</a>) 使用 e-graph 联合优化实现选择与调度。"
+      - "<strong>编译优化与 LLM 系统。</strong> 我探索大模型推进编译与软硬件协同设计，并研究支撑大模型负载的编译与系统技术。EggMind (<a href='https://arxiv.org/abs/2604.17364'>preprint</a>) 使用大模型生成等价饱和策略，以实现规模化的编译器超优化探索；IntelliC (<a href='https://github.com/uv-xiao/IntelliC'>GitHub</a>) 研究面向人与模型协作的可检查编译表示；Spine (<a href='https://github.com/arch-of-shadow/spine'>GitHub</a>) 以验证边界约束从高层次架构意图到芯片设计的跨层协同生成；PTO Runtime (<a href='https://github.com/hw-native-sys/simpler'>GitHub</a>) 面向 Ascend 芯片和灵衢 SuperPod，支持编译任务图的动态算子融合与分布式执行；Hive (<a href='https://arxiv.org/abs/2604.17353'>preprint</a>) 提供多智能体推理基础设施。"
     diagram:
-      current_title: "当前方向：面向新型 AI 芯片 LLM 基础设施的智能体"
-      agent:
-        title: "原生多智能体架构"
-        summary_lines:
-          - "程序化并发模型"
-          - "human-in-the-loop 工作流"
-          - "编排策略与工作流定制"
-      workflow:
-        title: "LLM 基础设施研发"
-        summary_lines:
-          - "分层算子优化 skill 系统演进"
-          - "agent 原生编译体系构建"
-          - "芯片架构感知性能优化"
-      outcomes:
-        - title: 模型服务效率
+      compact: true
+      current_work:
+        title: "实习课题：面向新领域、长任务的芯片算子自动优化Agent"
+        items:
+          - "可扩展数据流芯片算子 Benchmark"
+          - "多编译路径的分层知识与技能系统"
+          - "全场景的数据采集与训练工作流"
+      classes:
+        - title: 架构描述与探索
           summary_lines:
-            - "让新型 AI 芯片更高效地"
-            - "服务大模型负载。"
-        - title: 开发数据与 trajectory
+            - "使用编译分析、形式化方法与 DSL"
+            - "描述并探索"
+            - "架构设计空间。"
+          works:
+            - { name: ISAMORE, tag: "ASPLOS '26", link: "https://doi.org/10.1145/3779212.3790162" }
+            - { name: Cayman, tag: "DAC '25", link: "https://doi.org/10.1109/DAC63849.2025.11132875" }
+            - { name: APS, tag: "ICCAD '25", link: "https://doi.org/10.1109/ICCAD66269.2025.11240817" }
+            - { name: Aquas, tag: "ICCAD '26", link: "/assets/pdf/aquas_iccad.pdf" }
+        - title: 芯片设计语言与编译
           summary_lines:
-            - "将真实系统研发过程转化为"
-            - "模型训练数据，持续增强"
-            - "coding / 系统智能体能力。"
-      relations:
-        coordinate: "落地应用"
-        serve: "提升服务"
-        record: "沉淀轨迹"
-        feedback: "训练更强智能体"
-        artifacts: "结构化产物"
-        methods: "优化方法"
-        execution: "执行反馈"
-      foundation_title: "编译器驱动的敏捷芯片设计基础"
-      foundation_subtitle: "表达设计意图  ->  优化软硬件实现  ->  执行并获得反馈"
-      foundations:
-        - title: "领域专用语言与编译栈"
+            - "领域专用语言、多层次 IR 与编译栈"
+            - "将架构意图综合为硬件。"
+          works:
+            - { name: Hector, tag: "ICCAD '22", link: "https://doi.org/10.1145/3508352.3549370" }
+            - { name: Cement, tag: "FPGA '24", link: "https://doi.org/10.1145/3626202.3637561" }
+            - { name: Cement2, tag: "preprint", link: "https://arxiv.org/abs/2511.15073" }
+            - { name: Clay, tag: "ICCAD '25", link: "https://doi.org/10.1109/ICCAD66269.2025.11240669" }
+            - { name: SkyEgg, tag: "preprint", link: "https://arxiv.org/abs/2511.15323" }
+        - title: 编译优化与 LLM 系统
           summary_lines:
-            - "以 DSL 和多层次 IR 表达软硬件意图，"
-            - "通过编译与综合 passes"
-            - "逐层降级为可执行设计。"
-          work_rows:
-            - [{ name: Hector, link: "https://doi.org/10.1145/3508352.3549370" }, { name: Cement, link: "https://doi.org/10.1145/3626202.3637561" }]
-            - [{ name: APS, link: "https://doi.org/10.1109/ICCAD66269.2025.11240817" }, { name: Aquas, link: "/assets/pdf/aquas_iccad.pdf" }]
-        - title: "架构定制与硬件综合优化"
-          summary_lines:
-            - "以形式化方法、e-graph 与编译搜索"
-            - "自动完成 ISA、微架构"
-            - "及加速器实现优化。"
-          work_rows:
-            - [{ name: ISAMORE, link: "https://doi.org/10.1145/3779212.3790162" }, { name: Clay, link: "https://doi.org/10.1109/ICCAD66269.2025.11240669" }, { name: Cayman, link: "https://doi.org/10.1109/DAC63849.2025.11132875" }]
-            - [{ name: SkyEgg, link: "https://arxiv.org/abs/2511.15323" }, { name: EggMind, link: "https://arxiv.org/abs/2604.17364" }]
-        - title: "执行与协同设计系统"
-          summary_lines:
-            - "以可检查产物、任务图和运行时反馈"
-            - "连接设计意图、编译结果"
-            - "与真实系统执行。"
-          work_rows:
-            - [{ name: IntelliC, link: "https://github.com/uv-xiao/IntelliC" }, { name: PTO Runtime, link: "https://github.com/hw-native-sys/simpler" }]
-            - [{ name: Hive, link: "https://arxiv.org/abs/2604.17353" }, { name: Spine, link: "https://github.com/arch-of-shadow/spine" }]
-
+            - "大模型推进编译与协同设计，"
+            - "编译器 / 运行时系统"
+            - "支撑 LLM 执行。"
+          works:
+            - { name: EggMind, tag: "preprint", link: "https://arxiv.org/abs/2604.17364" }
+            - { name: IntelliC, tag: "GitHub", link: "https://github.com/uv-xiao/IntelliC" }
+            - { name: Spine, tag: "GitHub", link: "https://github.com/arch-of-shadow/spine" }
+            - { name: PTO Runtime, tag: "GitHub", link: "https://github.com/hw-native-sys/simpler" }
+            - { name: Hive, tag: "preprint", link: "https://arxiv.org/abs/2604.17353" }
 - title: 代表性论文
   type: time_table
   contents:
@@ -147,6 +128,19 @@
       description:
         - "Ruifan Xu, Youwei Xiao, Jin Luo, Yun Liang"
 
+- title: 学术服务
+  type: time_table
+  contents:
+    - title: 学生技术程序委员会委员
+      institution: 第59届 IEEE/ACM 国际微体系结构研讨会（MICRO 2026）
+      year: 2026
+    - title: 技术程序委员会委员
+      institution: ACM/IEEE 机器学习辅助设计研讨会（MLCAD 2026）
+      year: 2026
+    - title: 期刊评审
+      institution: IEEE 计算机辅助设计集成电路与系统汇刊（TCAD）；ACM 嵌入式计算系统汇刊（TECS）
+      year: 2024
+
 - title: 荣誉奖励
   type: time_table
   contents:
@@ -163,7 +157,6 @@
       institution: 北京大学信息科学技术学院仅5人获奖
       year: 2018-2019
     - title: 深圳证券交易所奖学金
-      institution: 北京大学信息科学技术学院17人获奖
       year: 2019-2020
     - title: 三好学生
       institution: 综合表现优秀，授予前10%学生
