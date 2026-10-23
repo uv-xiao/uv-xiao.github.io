@@ -8,9 +8,10 @@ category: research
 github: https://github.com/pku-liang/ISAMORE
 related_papers:
   - youwei2025isamore
+  - sun2027scaleisa
 ---
 
-**ISAMORE** is an end-to-end framework for discovering reusable custom instructions from domain applications using e-graph anti-unification.
+**ISAMORE** is an end-to-end framework for discovering reusable custom instructions from domain applications using e-graph anti-unification. **[ScaleISA](https://doi.org/10.1145/3845814.3850048)** (ASPLOS 2027) continues this line as its MLIR extension, using multi-level e-graph anti-unification to customize scalable instructions.
 
 ```text
 +---------------------------------------------------------------+

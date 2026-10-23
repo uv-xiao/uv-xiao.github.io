@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -e
+
 # Source environment setup
 source "$(dirname "$0")/setup-env.sh"
 

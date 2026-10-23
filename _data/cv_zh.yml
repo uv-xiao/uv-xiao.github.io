@@ -41,7 +41,7 @@
     paragraphs:
       - "我的研究方向是<strong>编译器与软硬件协同优化、大模型驱动编译优化与算子生成</strong>，围绕敏捷芯片设计与编译优化的软硬件协同形成三个相互耦合的方向：架构描述与探索发现并形式化可复用硬件能力；芯片设计语言与编译表达这些能力并将其综合为具体实现；编译优化与 LLM 系统持续改进编译、执行和协同设计流程。"
       - "<strong>当前算子模型与智能体工作。</strong> 在 ByteDance Seed，我创建面向数据流架构芯片、覆盖算子编程与优化任务的可扩展 Benchmark，构建多编译路径的分层知识与技能系统，以及全场景的数据采集与训练工作流，以持续演进模型能力。最终目标是构建一套方法与流程，使模型与智能体能够快速具备面向新芯片架构的专家级算子优化能力。"
-      - "<strong>架构描述与探索。</strong> 我结合编译分析、形式化方法和架构 DSL，表示并搜索设计空间，并将定制硬件能力连接到可编程软件。ISAMORE (<a href='https://doi.org/10.1145/3779212.3790162'>DOI</a>) 通过对等价程序片段进行反合一发现可复用自定义指令；Cayman (<a href='https://doi.org/10.1109/DAC63849.2025.11132875'>DOI</a>) 从完整应用中发现加速器机会，并协同优化控制流与数据访问；APS (<a href='https://doi.org/10.1109/ICCAD66269.2025.11240817'>DOI</a>, <a href='https://github.com/pku-liang/APS'>GitHub</a>) 和 Aquas (<a href='/assets/pdf/aquas_iccad.pdf'>ICCAD 2026</a>) 通过 DSL 描述定制架构，并以完整软硬件编译栈暴露其可编程能力。"
+      - "<strong>架构描述与探索。</strong> 我结合编译分析、形式化方法和架构 DSL，表示并搜索设计空间，并将定制硬件能力连接到可编程软件。ISAMORE (<a href='https://doi.org/10.1145/3779212.3790162'>DOI</a>) 通过对等价程序片段进行反合一发现可复用自定义指令；ScaleISA (<a href='https://doi.org/10.1145/3845814.3850048'>DOI</a>, ASPLOS 2027) 是 ISAMORE 的 MLIR 拓展，通过多层次 e-graph 反合一发现可扩展自定义指令；Cayman (<a href='https://doi.org/10.1109/DAC63849.2025.11132875'>DOI</a>) 从完整应用中发现加速器机会，并协同优化控制流与数据访问；APS (<a href='https://doi.org/10.1109/ICCAD66269.2025.11240817'>DOI</a>, <a href='https://github.com/pku-liang/APS'>GitHub</a>) 和 Aquas (<a href='/assets/pdf/aquas_iccad.pdf'>ICCAD 2026</a>) 通过 DSL 描述定制架构，并以完整软硬件编译栈暴露其可编程能力。"
       - "<strong>芯片设计语言与编译。</strong> 我在多个抽象层次设计领域专用语言和中间表示，并提出编译与综合 pass，用于优化时序、微架构、实现选择、映射与调度。Hector (<a href='https://doi.org/10.1145/3508352.3549370'>DOI</a>, <a href='https://github.com/pku-liang/Hector'>GitHub</a>) 提供多层次 MLIR 基础；Cement (<a href='https://doi.org/10.1145/3626202.3637561'>DOI</a>) 与 Cement2 (<a href='https://arxiv.org/abs/2511.15073'>preprint</a>) 分别提出周期确定的 DSL 与时间事务抽象；Clay (<a href='https://doi.org/10.1109/ICCAD66269.2025.11240669'>DOI</a>) 实现微架构感知的 ASIP 指令；SkyEgg (<a href='https://arxiv.org/abs/2511.15323'>preprint</a>) 使用 e-graph 联合优化实现选择与调度。"
       - "<strong>编译优化与 LLM 系统。</strong> 我探索大模型推进编译与软硬件协同设计，并研究支撑大模型负载的编译与系统技术。EggMind (<a href='https://arxiv.org/abs/2604.17364'>preprint</a>) 使用大模型生成等价饱和策略，以实现规模化的编译器超优化探索；IntelliC (<a href='https://github.com/uv-xiao/IntelliC'>GitHub</a>) 研究面向人与模型协作的可检查编译表示；Spine (<a href='https://github.com/arch-of-shadow/spine'>GitHub</a>) 以验证边界约束从高层次架构意图到芯片设计的跨层协同生成；PTO Runtime (<a href='https://github.com/hw-native-sys/simpler'>GitHub</a>) 面向 Ascend 芯片和灵衢 SuperPod，支持编译任务图的动态算子融合与分布式执行；Hive (<a href='https://arxiv.org/abs/2604.17353'>preprint</a>) 提供多智能体推理基础设施。"
     diagram:
@@ -60,6 +60,7 @@
             - "架构设计空间。"
           works:
             - { name: ISAMORE, tag: "ASPLOS '26", link: "https://doi.org/10.1145/3779212.3790162" }
+            - { name: ScaleISA, tag: "ASPLOS '27", link: "https://doi.org/10.1145/3845814.3850048" }
             - { name: Cayman, tag: "DAC '25", link: "https://doi.org/10.1109/DAC63849.2025.11132875" }
             - { name: APS, tag: "ICCAD '25", link: "https://doi.org/10.1109/ICCAD66269.2025.11240817" }
             - { name: Aquas, tag: "ICCAD '26", link: "/assets/pdf/aquas_iccad.pdf" }
@@ -87,6 +88,11 @@
 - title: 代表性论文
   type: time_table
   contents:
+    - title: "ScaleISA: Customizing Scalable Instructions via Multi-Level E-Graph Anti-Unification"
+      institution: ASPLOS 2027
+      year: 2027
+      description:
+        - "Yitian Sun, Youwei Xiao, Yuyang Zou, Chenyun Yin, Yun Liang"
     - title: "LLM-Guided Strategy Synthesis for Scalable Equality Saturation"
       institution: arXiv 预印本
       year: 2026
