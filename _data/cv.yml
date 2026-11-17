@@ -11,12 +11,13 @@
 - title: Education
   type: time_table
   contents:
-    - title: Ph.D. Candidate in Integrated Circuit Science and Engineering
+    - title: Final-year Ph.D. Candidate in Integrated Circuit Science and Engineering
       institution: School of Integrated Circuits, Peking University
       location: Beijing, China
-      year: 2022 - Present
+      year: 2022 - 2027 (expected)
       description:
         - "Advisor: Prof. Yun Liang"
+        - "<strong>Expected graduation: 2027.</strong> Open to <strong>industry positions</strong>, especially <strong>top-talent programs</strong>."
         - "Research: compiler-driven hardware-software co-design for agile chips"
     - title: Bachelor of Science in Computer Science
       institution: School of EECS, Peking University

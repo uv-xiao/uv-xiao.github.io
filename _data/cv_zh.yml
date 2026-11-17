@@ -11,12 +11,13 @@
 - title: 教育经历
   type: time_table
   contents:
-    - title: 集成电路科学与工程博士研究生
+    - title: 集成电路科学与工程博士研究生（最后一年）
       institution: 北京大学集成电路学院
       location: 中国北京
-      year: 2022 - 至今
+      year: 2022 - 2027（预计）
       description:
         - "导师：梁云教授"
+        - "<strong>预计 2027 年毕业</strong>，并在寻找<strong>业界职位</strong>，尤其是<strong>顶尖人才计划</strong>。"
         - "研究方向：编译器与软硬件协同优化、大模型驱动编译优化与算子生成"
     - title: 计算机科学与技术理学学士
       institution: 北京大学信息科学技术学院

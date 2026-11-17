@@ -23,6 +23,16 @@ body {
   font-family: "LXGW WenKai Screen", "LXGW WenKai", "Noto Serif CJK SC", "Source Han Serif SC", "Songti SC", "Microsoft YaHei", sans-serif;
 }
 
+// :lang() matches every descendant, including icon elements, and it is
+// loaded after Academicons. Restore the icon font so ORCID and DBLP
+// keep their glyphs on Chinese pages.
+:lang(zh-CN) .ai,
+:lang(zh) .ai,
+:lang(zh-CN) .ai::before,
+:lang(zh) .ai::before {
+  font-family: "Academicons";
+}
+
 body.fixed-top-nav {
   // Add some padding for the nav-bar.
   padding-top: 56px;

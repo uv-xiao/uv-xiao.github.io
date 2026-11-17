@@ -213,10 +213,23 @@ ul.task-list input[type="checkbox"] {
   line-height: 1.25;
   transform: translateX(0.35rem);
 
+  p {
+    display: block;
+  }
+
+  .profile-status {
+    color: var(--global-highlight-color);
+    font-weight: 600;
+  }
+
   .profile-name-zh {
     font-family: "PingFang SC", "Noto Sans CJK SC", "Source Han Sans SC", "Microsoft YaHei", sans-serif;
     font-weight: 500;
   }
+}
+
+.post p.availability {
+  color: var(--global-highlight-color);
 }
 
 .profile.about-profile .profile-social {
